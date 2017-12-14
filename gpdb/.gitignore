@@ -19,5 +19,14 @@
 test.main
 .*.swp
 .DS_Store
-${SSH*}
-*.tar
+*${SSH_ENV}
+*.bak
+# Packages
+*.zip
+*.tar.gz
+*.rpm
+*.msi
+*.gppkg
+*.pdf
+*.tar.z
+*.ova
