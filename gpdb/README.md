@@ -1,36 +1,62 @@
-# gpdb-docker
-Pivotal Greenplum Database Base Docker Image (4.3.7.1)
-
-[![](https://images.microbadger.com/badges/version/pivotaldata/gpdb-base.svg)](https://microbadger.com/images/pivotaldata/gpdb-base "Get your own version badge on microbadger.com")
+# Building Greenplum docker images
+You can use these scripts to build Greenplum docker files for 4.3.x , 5.x and Open Source.
 
 
-# Building the Docker Image
-You will first need to download the Pivotal Greenplum Database 4.3.7.1 installer (.zip) located at https://network.pivotal.io/products/pivotal-gpdb and place it inside the docker working directory.
+# Building the Docker Image with Pivotal Network binaries
+## Pre-requisites:
+- Docker-compose
+- Pivotal Greenplum binaries.
 
-cd [docker working directory]
+## Downloading Pivotal Greenplum binaries
+Follow the instructions under the folder greenplum_downloaders
 
-docker build -t [tag] .
+## Building docker image for Centos or SUSE
+You can build Greenplum docker image with Centos 7 by using "build_docker.sh"
+```
+$ ./build_docker.sh -i 5.4.1-rhel6-x86_64
+```
 
-# Running the Docker Image
-docker run -i -p 5432:5432 [tag]
-docker run --name=gpdb --hostname=greenplum -i -p 5432:5432 kochan/gpdb5.1 bin/bash
+You can build Greenplum docker image with Centos 7 by using "build_docker.sh"
+```
+$ ./build_docker.sh -i sles11-x86_64
+```
 
+# Building the Docker Image with Open Source repository
+You can build Greenplum docker image with Ubuntu and Greenplum Open Source repository.
 
-# Container Accounts
-root/pivotal
+The build_docker.sh is used to build Greenplum OSS. Internally, it uses DockerfileOpenSource that depends on Ubuntu.
+```
+$ ./build_docker.sh -i opensource
+Type for Parameter: opensource
+Variable opensource exists!
+Building Open Source docker for opensource
+Sending build context to Docker daemon ...
+...
+Commit docker image
+sha256:ba58f8911e613018345133bdf54003b9fb051c27d71b843a31fa20e0532089a2
+```
 
-gpadmin/pivotal
+##  Running the OSS Docker Image
+You can run Greenplum OSS docker image by following the command below.
+```
+$ ./run_ossdocker.sh
+/bin/run-parts
+Running /docker-entrypoint.d
+Running bin/bash
+root@gpdbsne:/#
+```
+By default, Greenplum instance is not started. You can use these scripts to start/stop Greenplum "startGPDB.sh" and stopGPDB.sh".
 
-# Using psql in the Container
-su - gpadmin
-
-psql
-
-# Using pgadmin outside the Container
-Launch pgAdmin3
-
-Create new connection using IP Address and Port # (5432)
-RUN   service sshd start \
-        && su gpadmin -l -c "source /usr/local/greenplum-db/greenplum_path.sh;gpssh-exkeys -f /tmp/gpdb-hosts"  \
-        && su gpadmin -l -c "source /usr/local/greenplum-db/greenplum_path.sh;gpinitsystem -a -c  /tmp/gpinitsystem_singlenode -h /tmp/gpdb-hosts; exit 0 "\
-        && su gpadmin -l -c "export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source /usr/local/greenplum-db/greenplum_path.sh;psql -d template1 -c \"alter user gpadmin password 'pivotal'\"; createdb gpadmin;  exit 0"
+```
+root@gpdbsne:/# startGPDB.sh
+SSHD isn't running
+ * Starting OpenBSD Secure Shell server sshd                                 [ OK ]
+SSHD is running...
+20180130:20:06:12:000068 gpstart:gpdbsne:gpadmin-[INFO]:-Starting gpstart with args: -a
+20180130:20:06:12:000068 gpstart:gpdbsne:gpadmin-[INFO]:-Gathering information and validating the environment
+...
+20180130:20:06:12:000068 gpstart:gpdbsne:gpadmin-[INFO]:-Greenplum Binary Version: 'postgres (Greenplum Database) 5.4.1 build
+...
+20180130:20:06:19:000247 gpstart:gpdbsne:gpadmin-[ERROR]:-gpstart error: Master instance process running
+root@gpdbsne:/#
+```
