@@ -5,7 +5,6 @@
 . config.sh
 
 
-
 while getopts ":ht:" opt; do
   case $opt in
     t)
@@ -32,14 +31,15 @@ if docker images |grep ${DOCKER_PXF_TAG}; then
 fi
 # Build docker image
 echo "Build docker image"
-docker run  --detach --rm --tty -h ${CONTAINER_NAME}  \
-     ${DOCKER_LATEST_TAG} "/bin/bash"
+docker run   --privileged --detach --rm --tty -h ${CONTAINER_NAME}  \
+  -v /sys/fs/cgroup:/sys/fs/cgroup:ro  \
+     ${DOCKER_LATEST_TAG} "bin/bash"
 
 export CONTAINER_ID=`docker ps  -q --filter ancestor=${DOCKER_TAG} --format="{{.ID}}"`
 
-docker exec -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
-docker exec -i -t ${CONTAINER_ID} "/usr/local/bin/setupPXF.sh"
-docker exec -i -t ${CONTAINER_ID} "/usr/local/bin/startPXF.sh"
+docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
+docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/setupPXF.sh"
+docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startPXF.sh"
 
 echo "Commit docker image"
 export CONTAINER_ID=`docker ps -a -n=1 -q`

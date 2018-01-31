@@ -1,25 +1,48 @@
-sudo /home/cloudera/cloudera-manager --enterprise
-# [QuickStart] Shutting down CDH services via init scripts...
-# kafka-server: unrecognized service
-# JMX enabled by default
-# Using config: /etc/zookeeper/conf/zoo.cfg
-# [QuickStart] Disabling CDH services on boot...
-# error reading information on service kafka-server: No such file or directory
-# [QuickStart] Starting Cloudera Manager server...
-# [QuickStart] Waiting for Cloudera Manager API...
-# [QuickStart] Starting Cloudera Manager agent...
-# [QuickStart] Activating trial license for Enterprise...
-# [QuickStart] Configuring deployment...
-# Submitted jobs: 15
-# [QuickStart] Deploying client configuration...
-# Submitted jobs: 17
-# [QuickStart] Starting Cloudera Management Service...
-# Submitted jobs: 25
-# [QuickStart] Enabling Cloudera Manager daemons on boot...
-# ________________________________________________________________________________
-# Success! You can now log into Cloudera Manager from the QuickStart VM's browser:
-    # 
-    # http://quickstart.cloudera:7180
-    #
-    # Username: cloudera
-    # Password: cloudera
+#!/bin/bash
+check_stat=`ps -ef | grep 'hadoop' | awk '{print $2}'`
+if [ -n "$check_stat" ]
+then
+   echo "Apache Hadoop is running"
+
+else
+   echo "Apache Hadoop isn't running"
+ # TBD
+fi
+
+
+export CORE_SITE_XML=../conf/core-site.xml
+export HDFS_SITE_XML=../conf/hdfs-site.xml
+export MAPRED_SITE_XML=../conf/mapred-site.xml
+export START_PXF="/usr/local/bin/startPXF.sh"
+export STOP_PXF="/usr/local/bin/stopPXF.sh"
+
+
+if [ -f $CORE_SITE_XML ]
+then
+   echo "cp $CORE_SITE_XML /etc/hadoop/conf/core-site.xml"
+   sudo cp $CORE_SITE_XML /etc/hadoop/conf/core-site.xml
+else
+   echo "$CORE_SITE_XML is not found"
+ # TBD
+fi
+
+if [ -f $HDFS_SITE_XML ]
+then
+   echo "cp $HDFS_SITE_XML /etc/hadoop/conf/hdfs-site.xml"
+   sudo cp $HDFS_SITE_XML /etc/hadoop/conf/hdfs-site.xml
+else
+   echo "$HDFS_SITE_XML is not found"
+ # TBD
+fi
+
+if [ -f $MAPRED_SITE_XML ]
+then
+   echo "cp $MAPRED_SITE_XML /etc/hadoop/conf/mapred-site.xml"
+   sudo cp $MAPRED_SITE_XML /etc/hadoop/conf/mapred-site.xml
+else
+   echo "$MAPRED_SITE_XML is not found"
+ # TBD
+fi
+
+$STOP_PXF
+$START_PXF

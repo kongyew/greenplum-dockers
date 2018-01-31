@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export GPDB_HOSTS=/tmp/gpdb-hosts
 
 check_stat=`ps -ef | grep '[s]shd' | awk '{print $2}'`
 if [ -n "$check_stat" ]
@@ -10,6 +11,7 @@ else
    echo "SSHD isn't running"
    service sshd start
 fi
+
 # http://mirrors.ocf.berkeley.edu/apache/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz
 echo "export HADOOP_USER_NAME=gpadmin"
 gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "echo 'export HADOOP_USER_NAME=gpadmin' >> /home/gpadmin/.bash_profile"

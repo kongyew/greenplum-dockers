@@ -2,7 +2,13 @@ if [ -f /etc/bashrc ]; then
         . /etc/bashrc   # --> Read /etc/bashrc, if present.
 fi
 
+if [ -f /usr/local/greenplum-db/greenplum_path.sh ]; then
+  source /usr/local/greenplum-db/greenplum_path.sh
+fi
 
+if [ -f /opt/gpdb/greenplum_path.sh ]; then
+ source /opt/gpdb/greenplum_path.sh
+fi
 #---------------
 # Some settings
 #---------------
@@ -132,14 +138,27 @@ HISTFILESIZE=2000
 startGPDB()
 {
     export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1
-    source /usr/local/greenplum-db/greenplum_path.sh
+    if [ -f /usr/local/greenplum-db/greenplum_path.sh ]; then
+      source /usr/local/greenplum-db/greenplum_path.sh
+    fi
+
+    if [ -f /opt/gpdb/greenplum_path.sh ]; then
+     source /opt/gpdb/greenplum_path.sh
+    fi
     gpstart -a
 }
 
 function stopGPDB()
 {
-#    export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+#   export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1
-    source /usr/local/greenplum-db/greenplum_path.sh
+
+    if [ -f /usr/local/greenplum-db/greenplum_path.sh ]; then
+      source /usr/local/greenplum-db/greenplum_path.sh
+    fi
+
+    if [ -f /opt/gpdb/greenplum_path.sh ]; then
+     source /opt/gpdb/greenplum_path.sh
+    fi
     gpstop -a
 }

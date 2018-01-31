@@ -6,9 +6,9 @@
 */*/*.pdf
 */*/*.jar
 */*/greenplum-clients*.zip
-*/*/greenplum-db-*-sles11-x86_64.*
 */*/greenplum-db-*-rhel7-x86_64.*
 */*/greenplum-db-appliance-*-rhel6-x86_64.zip
 */*/greenplum-loaders*
-*/*/*.gppkg
+#*/*/*.gppkg
+
 */*/PROGRESS_DATADIRECT*

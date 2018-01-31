@@ -15,9 +15,10 @@ export INSTALLDIR=/tmp
 
 #
 echo "Untar madlib package"
-export madlib_file=`$INSTALLDIR/ls madlib*.tar.gz`
+export madlib_file=`ls $INSTALLDIR/madlib*.tar.gz`
 tar -xvf $madlib_file
 
 echo "Find madlib package"
+export in_file=`ls $INSTALLDIR/madlib*.gppkg`
 export out_file="$(echo $in_file | sed 's=.*/==;s/\.[^.]*$/.gppkg/')"
-gppkg $out_file
+gppkg --install $out_file 

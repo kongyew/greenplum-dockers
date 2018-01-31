@@ -13,7 +13,7 @@ docker run  -it --hostname=gpdbsne \
     --publish 88:22 \
     --volume ${VOLUME}:/code \
     ${DOCKER_TAG} bin/bash
-    #--link 260_namenode_1:260_namenode_1 \
+
 
 #SAutomatically delete containers when they exit
 

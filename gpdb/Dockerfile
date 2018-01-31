@@ -1,13 +1,15 @@
 #
 #  Dockerfile for a GPDB Image
 #
-FROM centos:6.7
+#FROM centos:6.9
+#FROM centos:7.4.1708
+FROM centos/systemd
 
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.2.0-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.2.0"
+ARG GPDB_VERSION="5.4.1-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.4.1"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
@@ -15,22 +17,30 @@ ENV ENV_GPDB_VERSION=$GPDB_VERSION
 ################################################################################
 
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
-#COPY ${GPDB_DOWNLOAD}/*.gppkg /tmp
-COPY ${GPDB_DOWNLOAD}/madlib-*.tar.gz /tmp
+COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
+#COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
+
+COPY ${GPDB_DOWNLOAD}/madlib-*.tar.gz /tmp/
 COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
 
 COPY configs /opt/configs/
 COPY PXF    /opt/PXF/
 COPY madlib    /opt/madlib/
 COPY dblink    /opt/dblink/
-
+COPY pl_java    /opt/pl_java/
+COPY gphdfs    /opt/gphdfs/
+################################################################################
+#
 # Default RPM
+################################################################################
 RUN echo root:pivotal | chpasswd \
     && yum install -y vim wget unzip which tar more util-linux-ng passwd \
     && yum install -y openssh-clients openssh-server ed m4 sudo \
     && yum install -y  krb5-libs krb5-workstation \
     && yum install -y cronie cronie-anacron \
+    && yum install -y iproute net-tools less \
     && yum clean all
+
 
 RUN unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
     && rm /tmp/greenplum-db-${GPDB_VERSION}.zip \
@@ -55,8 +65,9 @@ RUN     cp /opt/configs/*.sh /usr/local/bin/ \
         && chmod +x /opt/PXF/*.sh \
         && cp /opt/PXF/*.sh /usr/local/bin \
         && chmod +x /opt/madlib/*.sh \
-        && cp /opt/madlib/*.sh /usr/local/bin
-
+        && cp /opt/madlib/*.sh /usr/local/bin \
+        && chmod +x /opt/pl_java/*.sh \
+        && cp /opt/pl_java/*.sh /usr/local/bin
 
 ###############################################################################
 RUN     /usr/sbin/groupadd gpadmin \
@@ -98,9 +109,9 @@ EXPOSE 40000 40001 40002
 
 VOLUME /data
 # Set the default command to run when starting the container
-
+RUN   systemctl enable sshd.service
 # ENTRYPOINT ["/bin/bash"]
-#CMD ["/usr/local/bin/entrypoint.sh"]
+
 
 
 ################################################################################
@@ -121,3 +132,4 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Default command
 CMD ["bin/bash"]
+################################################################################

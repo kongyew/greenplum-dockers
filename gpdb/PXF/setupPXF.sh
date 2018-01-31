@@ -11,6 +11,16 @@ else
    echo "SSHD isn't running"
    service sshd start
 fi
+# Default environment:
+if [ -f /usr/local/greenplum-db/greenplum_path.sh ]; then
+  export GPDB_HOME="/usr/local/greenplum-db"
+fi
+
+if [ -f /opt/gpdb/greenplum-db/greenplum_path.sh ]; then
+  export GPDB_HOME="/opt/gpdb"
+fi
+
+
 export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1
 export GPDB_HOSTS=/tmp/gpdb-hosts
 

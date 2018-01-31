@@ -1,15 +1,48 @@
 #!/bin/bash
 set -e
 [[ ${DEBUG} == true ]] && set -x
-
-
+set -x
 
 # Start the first process
-/etc/init.d/sshd start &
+#/etc/init.d/sshd start &
+if [ -f /etc/redhat-release ]; then  # Centos
+  major_version=$(rpm -qa \*-release | grep -Ei "oracle|redhat|centos" | cut -d"-" -f3)
+elif [ -f /etc/lsb-release ]; then # Ubuntu
+  major_version=$(OS_MAJOR_VERSION=`sed -rn 's/.*([0-9])\.[0-9].*/\1/p' /etc/lsb-release`)
+fi
+check_stat=$(ps -ef | grep '[s]shd' | awk '{print $2}')
+if [ -n "$check_stat" ]
+then
+   echo "SSHD is running"
+
+else
+  echo "SSHD isn't running"
+  if [ -f /etc/redhat-release ]; then
+    if  [ "$major_version" -ge "7" ]; then # "$a" -ge "$b" ]
+      #echo "systemctl start sshd.service"
+      #systemctl start sshd.service
+      /usr/bin/ssh-keygen -A
+      nohup /usr/sbin/sshd  &
+
+    else
+      service sshd start
+    fi
+  else
+    if [ -f /etc/lsb-release ]; then
+      /etc/init.d/ssh start
+    fi
+  fi
+fi
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to start sshd process: $status"
   exit $status
+fi
+
+check_stat=$(ps -ef | grep '[s]shd' | awk '{print $2}')
+if [ -n "$check_stat" ]
+then
+   echo "SSHD is running..."
 fi
 #
 # # Start the second process
