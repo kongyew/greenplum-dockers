@@ -29,11 +29,11 @@ echo "Remove docker image with tag:  ${DOCKER_PXF_TAG}"
 if docker images |grep "${DOCKER_PXF_TAG}"; then
      docker rmi -f "${DOCKER_PXF_TAG}"
 fi
-# Build docker image
+# Build docker image from default GPDB image
 echo "Build docker image"
 docker run  --privileged --detach --rm --tty -h "${CONTAINER_NAME}"  \
   -v /sys/fs/cgroup:/sys/fs/cgroup:ro  \
-     "${DOCKER_LATEST_TAG}" "bin/bash"
+     "${DOCKER_TAG}" "bin/bash"
 
 export CONTAINER_ID=`docker ps  -q --filter ancestor="${DOCKER_TAG}" --format="{{.ID}}"`
 

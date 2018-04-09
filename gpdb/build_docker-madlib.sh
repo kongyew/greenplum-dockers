@@ -3,18 +3,17 @@
 . config.sh
 
 echo "Remove docker image"
-if docker images |grep ${DOCKER_TAG}; then
+if docker images |grep ${DOCKER_MADLIB_TAG}; then
      docker rmi -f ${DOCKER_MADLIB_TAG}
 fi
-
 
 # Build docker image
 echo "Build docker image"
 docker run  --detach --rm --tty -h gpdbsne  \
-     ${DOCKER_LATEST_TAG} "/bin/bash"
+     ${DOCKER_MADLIB_TAG} "/bin/bash"
 
 
-export CONTAINER_ID=`docker ps  -q --filter ancestor=${DOCKER_LATEST_TAG} --format="{{.ID}}"`
+export CONTAINER_ID=`docker ps  -q --filter ancestor=${DOCKER_MADLIB_TAG} --format="{{.ID}}"`
 
 docker exec -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
 docker exec -i -t   ${CONTAINER_ID} "/opt/madlib/setupMadlib.sh"
