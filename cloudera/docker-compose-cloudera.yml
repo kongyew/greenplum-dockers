@@ -1,15 +1,18 @@
-version: '2'
+version: '3'
 services:
   cloudera:
     image: cloudera/quickstart:latest
     command: /usr/bin/docker-quickstart
+    #;/home/cloudera/cloudera-manager --express
     hostname: "quickstart.cloudera"
     container_name: quickstart.cloudera
+    environment:
+      - COMPOSE_HTTP_TIMEOUT=120 # default is 60
     ports:
       - "8020:8020"
       - "8022:22"     # ssh
       - "7180:7180"   # Cloudera Manager
-      - "8888:8888"   # HUE
+      - "8888:8888"   # HUE - user/passwd   cloudera/cloudera
       - "11000:11000" # Oozie
       - "50070:50070" # HDFS REST Namenode
       - "2181:2181"
@@ -43,7 +46,7 @@ services:
         #build:
         #  context: .
         #  dockerfile: ./gpdb/Dockerfile
-        image: "kochan/gpdb5-pxf"
+        image: "kochanpivotal/gpdb5-pxf"
         command: bin/bash
         hostname: "gpdbsne"
         container_name: gpdbsne
@@ -59,7 +62,7 @@ services:
          - "5432"
         volumes:
          - ..:/code
-
+        privileged: true
         tty: true
         networks:
           mynetwork:

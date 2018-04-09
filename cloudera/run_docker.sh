@@ -2,7 +2,6 @@
 export DOCKER_LABEL="cloudera"
 export DOCKER_TAG="cloudera/quickstart:latest"
 
-
 docker run  -it -h quickstart.cloudera \
     --publish 8020:8020 \
     --publish 8022:22 \

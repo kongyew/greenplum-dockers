@@ -1,0 +1,16 @@
+version: '3'
+services:
+    gpdb5:
+        build: .
+        environment:
+          - PRODUCTION=1
+        ports:
+          - "22:22"
+          - "5432:5432"
+          - "40000:40000"
+          - "40001:40001"
+          - "40002:40002"
+        volumes:
+          - .:/code
+        depends_on:
+            - db

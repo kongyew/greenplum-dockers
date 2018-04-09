@@ -1,20 +1,26 @@
 #!/bin/bash
 
 export BUILD_ENV="test"
-export VOLUME=`pwd`
+VOLUME=$(pwd)
+CONTAINER_NAME='gpdb5pxf'
 
-
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Including configurations
-. config.sh
+. "${DIR}"/config.sh
+
+
+CONTAINER_ID=$(docker ps -aq --filter name=${CONTAINER_NAME})
+
+if [ "$CONTAINER_ID" != "" ]; then
+  docker rm "$CONTAINER_ID"
+fi
+
 
 docker run  -it --hostname=gpdbsne \
-    --name gpdb5pxf \
+    --name ${CONTAINER_NAME} \
+    --privileged \
     --publish 5432:5432 \
     --publish 88:22 \
-    --volume ${VOLUME}:/code \
-    ${DOCKER_TAG} bin/bash
-
-
-#SAutomatically delete containers when they exit
-
-#docker exec -it gpdb5 sudo -u gpadmin psql
+    --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
+    --volume "${VOLUME}":/code \
+    "${DOCKER_TAG}" bin/bash

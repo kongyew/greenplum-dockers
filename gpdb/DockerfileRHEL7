@@ -15,6 +15,7 @@ ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.4.1"
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
 
 ################################################################################
+
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
@@ -28,8 +29,6 @@ COPY madlib    /opt/madlib/
 COPY dblink    /opt/dblink/
 COPY pl_java    /opt/pl_java/
 COPY gphdfs    /opt/gphdfs/
-
-
 ################################################################################
 #
 # Default RPM

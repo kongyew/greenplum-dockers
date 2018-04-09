@@ -9,16 +9,12 @@ export CLOUDERA_HIVE_DOWNLOAD_URL=http://archive.cloudera.com/cdh5/cdh/5/hive-1.
 export CLOUDERA_HIVE_TAR_GZ=hive-1.1.0-cdh5.10.2.tar.gz
 export CLOUDERA_HIVE_DIR=hive-1.1.0-cdh5.10.2
 
-echo "Verify SSHD is running ..."
-check_stat=`ps -ef | grep sshd | grep -v grep | awk '{print $2}'`
-if [ "${check_stat}X" != "X" ]
-then
-  echo "SSHD is running"
-else
-  echo "SSHD isn't running"
-  service sshd start
-fi
+# Change to temporary directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Including files
+. ${DIR}/util.sh
 
+###############################################################################
 function InstallCDHHive_TAR_GZ()
 {
   echo "Download Cloudera 2.6-cdh5 - HIVE from $CLOUDERA_HIVE_DOWNLOAD_URL"
@@ -37,11 +33,8 @@ function InstallCDHHive_TAR_GZ()
 
   echo "rm /home/gpadmin/$CLOUDERA_HIVE_TAR_GZ "
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "rm /home/gpadmin/$CLOUDERA_HIVE_TAR_GZ"
-
-
 }
-
-
+###############################################################################
 function InstallCDHHive_RPM()
 {
   echo "Run 'sudo yum -y install hive' on all segments"
@@ -50,6 +43,9 @@ function InstallCDHHive_RPM()
   echo "Run 'sudo yum -y install hbase' on all segments"
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "sudo yum -y install hbase"
 }
+###############################################################################
 
+###############################################################################
+# Main
 #InstallCDHHive_TAR_GZ
 InstallCDHHive_RPM

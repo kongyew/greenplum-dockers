@@ -1,0 +1,7 @@
+FROM minio/mc
+
+################################################################################
+COPY configs /opt/configs/
+COPY S3Examples  /opt/S3Examples/
+
+ENTRYPOINT ["/bin/sh minio/mc"]

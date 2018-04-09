@@ -11,7 +11,7 @@ while getopts ":ht:" opt; do
       echo "Type for Parameter: $OPTARG" >&2
       ;;
     h)
-      echo "To set PXF installation type, use -t with these arguments [cdh|hdp|mapr]" >&2
+      echo "To set Alluxio installation type, use -t with these arguments [default]" >&2
       exit 0;
       ;;
     \?)
@@ -25,9 +25,9 @@ while getopts ":ht:" opt; do
   esac
 done
 
-echo "Remove docker image with tag:  ${DOCKER_PXF_TAG}"
-if docker images |grep "${DOCKER_PXF_TAG}"; then
-     docker rmi -f "${DOCKER_PXF_TAG}"
+echo "Remove docker image with tag:  ${DOCKER_ALLUXIO_TAG}"
+if docker images |grep "${DOCKER_ALLUXIO_TAG}"; then
+     docker rmi -f "${DOCKER_ALLUXIO_TAG}"
 fi
 # Build docker image
 echo "Build docker image"
@@ -37,13 +37,17 @@ docker run  --privileged --detach --rm --tty -h "${CONTAINER_NAME}"  \
 
 export CONTAINER_ID=`docker ps  -q --filter ancestor="${DOCKER_TAG}" --format="{{.ID}}"`
 
-docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
-docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/setupPXF.sh"
-docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startPXF.sh"
+#docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
+docker exec  -i -t ${CONTAINER_ID} "yum -y install fuse fuse-devel"
+
+
+
+#docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/setupAlluxio.sh"
+#docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startAlluxio.sh"
 
 echo "Commit docker image"
 export CONTAINER_ID=`docker ps -a -n=1 -q`
-docker commit -m "${DOCKER_PXF_LABEL}" -a "author" ${CONTAINER_ID} ${DOCKER_PXF_TAG}
+docker commit -m "${DOCKER_ALLUXIO_LABEL}" -a "author" ${CONTAINER_ID} ${DOCKER_ALLUXIO_TAG}
 
 echo  "Stop docker :`docker ps | grep  ${CONTAINER_NAME}  | awk '{print $1}'`"
 docker ps | grep  ${CONTAINER_NAME}  | awk '{print $1}' | xargs docker stop

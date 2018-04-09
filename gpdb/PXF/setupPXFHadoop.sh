@@ -13,25 +13,31 @@ export CLOUDERA_RPM_REPO=https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/c
 export HORTONWORKS_RPM_REPO=http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo
 
 # Change to temporary directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Including files
+. "${DIR}"/util.sh
 
-
+###############################################################################
 function InstallJDK()
 {
   echo "Install Java on each Greenplum Database segment host"
   # Fix this issue "Rpmdb checksum is invalid: dCDPT(pkg checksums)"
   gpssh -e -v -f ${GPDB_HOSTS} -u root rpm --rebuilddb
   #;  yum clean all
-  gpssh -e -v -f ${GPDB_HOSTS} -u root yum -y install wget java-1.8.0-openjdk-1.8.0*
+  gpssh -e -v -f ${GPDB_HOSTS} -u root yum -y install wget java-1.8.0-openjdk
+  # sudo yum install java-1.8.0-openjdk
+  # sudo yum install java-1.7.0-openjdk
+  # sudo yum install java-1.6.0-openjdk
 
   echo "Update the gpadmin user’s .bash_profile file on each segment host to include this $JAVA_HOME setting"
 
-  export JRE_HOME=`pwd /usr/lib/jvm/java-1.8.0-openjdk-*/jre`
+  export JRE_HOME=$(pwd /usr/lib/jvm/java-1.8.0-openjdk-*/jre_)
   echo "JRE_HOME : ${JRE_HOME}"
   echo "Add Java home to gpadmin bashrc"
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "echo 'export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' >> /home/gpadmin/.bash_profile"
 
 }
-
+###############################################################################
 function InstallCDH_RPM()
 {
   echo "Download Cloudera REPO : $CLOUDERA_RPM_REPO"
@@ -44,8 +50,7 @@ function InstallCDH_RPM()
   echo "Run 'sudo yum -y install hadoop-client' to all segments"
   gpssh -f ${GPDB_HOSTS}  -u gpadmin  "sudo yum -y install hadoop-client"
 }
-
-
+###############################################################################
 function InstallCDH_TAR()
 {
   cd /tmp
@@ -77,18 +82,10 @@ function InstallCDH_TAR()
   gpscp -v -f ${GPDB_HOSTS} -u gpadmin avro-mapred-*.jar =:/home/gpadmin/hadoop-2.6.0-cdh5.10.2/share/hadoop/common/lib
   rm avro-mapred-1.7.1.jar
 }
+###############################################################################
 
-echo "Verify SSHD is running ..."
-check_stat=`ps -ef | grep sshd | grep -v grep | awk '{print $2}'`
-if [ "${check_stat}X" != "X" ]
-then
-  echo "SSHD is running"
-else
-  echo "SSHD isn't running"
-  service sshd start
-fi
-
-
+# Main
+startSSH
 InstallJDK
 InstallCDH_RPM
 

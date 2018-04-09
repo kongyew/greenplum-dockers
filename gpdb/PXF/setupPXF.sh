@@ -1,16 +1,13 @@
 #!/bin/bash
 set -e
+[[ ${DEBUG} == true ]] && set -x
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Including files
+. ${DIR}/util.sh
 
-check_stat=`ps -ef | grep '[s]shd' | awk '{print $2}'`
-if [ -n "$check_stat" ]
-then
-   echo "SSHD is running"
+startSSH
 
-else
-   echo "SSHD isn't running"
-   service sshd start
-fi
 # Default environment:
 if [ -f /usr/local/greenplum-db/greenplum_path.sh ]; then
   export GPDB_HOME="/usr/local/greenplum-db"
@@ -34,6 +31,8 @@ echo "sync_retries = 5" >> $MASTER_DATA_DIRECTORY/gpssh.conf
 
 echo "Using scripts to download tar files or RPM"
 su gpadmin -c "setupPXFHadoop.sh RPM"
-service sshd restart # sometime it failed
+#service sshd restart # sometime it failed
+
 su gpadmin -c "setupPXFHive.sh RPM"
+
 su gpadmin -c "setupPXFInit.sh"

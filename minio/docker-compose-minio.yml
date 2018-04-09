@@ -1,0 +1,139 @@
+version: '3'
+# starts 4 docker containers running minio server instances. Each
+# minio server's web interface will be accessible on the host at port
+# 9001 through 9004.
+services:
+    minio1:
+      hostname: "minio1"
+      container_name: "minio1"
+      image: minio/minio
+      volumes:
+       - data1:/data
+      ports:
+       - "9001:9000"
+      environment:
+       MINIO_ACCESS_KEY: minio
+       MINIO_SECRET_KEY: minio123
+      command: server http://minio1/data http://minio2/data http://minio3/data http://minio4/data
+      networks:
+        mynetwork:
+          aliases:
+            - minio1
+
+    minio2:
+      hostname: "minio2"
+      container_name: "minio2"
+      image: minio/minio
+      volumes:
+       - data2:/data
+      ports:
+       - "9002:9000"
+      environment:
+       MINIO_ACCESS_KEY: minio
+       MINIO_SECRET_KEY: minio123
+      command: server http://minio1/data http://minio2/data http://minio3/data http://minio4/data
+      networks:
+        mynetwork:
+          aliases:
+            - minio2
+
+    minio3:
+      hostname: "minio3"
+      container_name: "minio3"
+      image: minio/minio
+      volumes:
+       - data3:/data
+      ports:
+       - "9003:9000"
+      environment:
+       MINIO_ACCESS_KEY: minio
+       MINIO_SECRET_KEY: minio123
+      command: server http://minio1/data http://minio2/data http://minio3/data http://minio4/data
+      networks:
+        mynetwork:
+          aliases:
+            - minio3
+    minio4:
+      hostname: "minio4"
+      container_name: "minio4"
+      image: minio/minio
+      volumes:
+       - data4:/data
+      ports:
+       - "9004:9000"
+      environment:
+       MINIO_ACCESS_KEY: minio
+       MINIO_SECRET_KEY: minio123
+      command: server http://minio1/data http://minio2/data http://minio3/data http://minio4/data
+      networks:
+        mynetwork:
+          aliases:
+            - minio4
+    minioclient:
+      hostname: "minioclient"
+      container_name: "minioclient"
+      image: minio/mc
+      depends_on:
+        - minio1
+      entrypoint:
+        /bin/sh -c "
+        /usr/bin/mc config host add minio http://minio1:9001 minio minio123;
+        /usr/bin/mc mb minio/testbucket;
+        /usr/bin/mc mb minio/testbucket;
+        /usr/bin/mc cp /opt/S3Examples/stocks.csv minio/testbucket;
+        /usr/bin/mc cp /opt/S3Examples/testdata.csv minio/testbucket;
+        /usr/bin/mc cp /opt/S3Examples/read_stocks.sql minio/testbucket;
+        /usr/bin/mc policy download minio/testbucket;"
+      volumes:
+       - .:/data
+      environment:
+       MINIO_ACCESS_KEY: minio
+       MINIO_SECRET_KEY: minio123
+      command: bin/bash
+      networks:
+        mynetwork:
+          aliases:
+            - minioclient
+    gpdb5:
+          #build:
+          #  context: .
+          #  dockerfile: ./gpdb/Dockerfile
+          image: "kochanpivotal/gpdb5oss"
+          command: "bin/bash;/usr/local/bin/startGPDB.sh"
+          hostname: "gpdb-minio"
+          container_name: gpdb-minio
+          ports:
+           - "5432:5432"
+           - "5005:5005"
+           - "5010:5010"
+           - "9022:22"
+           - "40000:40000"
+           - "40001:40001"
+           - "40002:40002"
+          expose:
+           - "5432"
+          volumes:
+           - ..:/code
+          privileged: true
+          tty: true
+          networks:
+            mynetwork:
+              aliases:
+                - gpdbsne
+                - gpdbsne.localdomain.com
+networks:
+    mynetwork:
+      driver: bridge
+
+
+## By default this config uses default local driver,
+## For custom volumes replace with volume driver configuration.
+volumes:
+  data1:
+  data2:
+  data3:
+  data4:
+  # data1:/tmp/data1
+  # data2:/tmp/data2
+  # data3:/tmp/data3
+  # data4:/tmp/data4

@@ -1,48 +1,13 @@
 #!/bin/bash
-set -e
+set -x
 [[ ${DEBUG} == true ]] && set -x
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Including files
-. util.sh
+. ${DIR}/util.sh
 
-# Get Version
-DISTRIBUTION=getDistribution
-echo "Distribution: $DISTRIBUTION"
-getOSVersion
-echo "major_version: $major_version"
-
-check_stat=$(ps -ef | grep 'init' | awk '{print $2}')
-
-if [ -n "$check_stat" ]
-then
-   echo "init is running"
-else
-   echo "init isn't running"
-   if [ -f /usr/sbin/init ]; then
-      /usr/sbin/init &
-   fi
-fi
-
-check_stat=$(ps -ef | grep '[s]shd' | awk '{print $2}')
-if [ -n "$check_stat" ]
-then
-   echo "SSHD is running"
-else
-   echo "SSHD isn't running"
-   if [ -f /etc/redhat-release ]; then
-     if  [ "$major_version" -ge "7" ]; then # "$a" -ge "$b" ]
-      #systemctl restart sshd.service
-          /usr/bin/ssh-keygen -A
-          /usr/sbin/sshd  &
-     else
-       service sshd start
-     fi
-   elif [ -f /etc/lsb-release ]; then
-       /etc/init.d/ssh start
-   elif [ -f /etc/os-release ]; then # SUSE
-          /usr/sbin/sshd -D &
-   fi
-fi
-
+startInit
+startSSH
 
 rm -rf /tmp/.s*
 

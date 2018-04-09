@@ -1,26 +1,27 @@
 #
 #  Dockerfile for a GPDB Image
 #
-#FROM centos:6.9
-#FROM centos:7.4.1708
-FROM centos/systemd
+FROM opensuse:42.3
 
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.4.1-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.4.1"
+ARG GPDB_VERSION="5.5.0-sles11-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.5.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
 
 ################################################################################
+
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
-#COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
+COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
 
-#COPY ${GPDB_DOWNLOAD}/madlib-*.tar.gz /tmp/
-#COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
+
+
+COPY ${GPDB_DOWNLOAD}/madlib-*.tar.gz /tmp/
+COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
 
 COPY configs /opt/configs/
 COPY PXF    /opt/PXF/
@@ -29,18 +30,15 @@ COPY dblink    /opt/dblink/
 COPY pl_java    /opt/pl_java/
 COPY gphdfs    /opt/gphdfs/
 
-
-################################################################################
-#
 # Default RPM
-################################################################################
-RUN echo root:pivotal | chpasswd \
-    && yum install -y vim wget unzip which tar more util-linux-ng passwd \
-    && yum install -y openssh-clients openssh-server ed m4 sudo \
-    && yum install -y  krb5-libs krb5-workstation \
-    && yum install -y cronie cronie-anacron \
-    && yum install -y iproute net-tools less \
-    && yum clean all
+#RUN cd tmp && curl https://raw.githubusercontent.com/yast/yast-yast2/master/scripts/yast2 && cp yast2 /sbin && chmod +x /sbin/yast2
+RUN zypper -n -v refresh \
+ && zypper -n update
+RUN echo root:pivotalsuse2018 | chpasswd \
+    && zypper -n install  vim wget unzip which tar less iproute \
+    && zypper -n install   openssh ed m4 sudo \
+    && zypper -n install  krb5 krb5-client \
+    && zypper -n install  cronie cronie-anacron  net-tools glibc-locale
 
 
 RUN unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
@@ -72,18 +70,35 @@ RUN     cp /opt/configs/*.sh /usr/local/bin/ \
 
 ###############################################################################
 RUN     /usr/sbin/groupadd gpadmin \
-        && /usr/sbin/useradd gpadmin -g gpadmin -G wheel \
-        && echo "pivotal"|passwd --stdin gpadmin \
-        && echo "gpadmin        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers \
-        && mv /opt/configs/bash_profile /home/gpadmin/.bash_profile \
-        && mv /opt/configs/bashrc_template /home/gpadmin/.bashrc \
+        && /usr/sbin/useradd -m -d /home/gpadmin -g gpadmin -G wheel gpadmin \
+        && echo "gpadmin:pivotal"| chpasswd \
+        && echo "gpadmin        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
+
+RUN     ls -al /opt/configs/bash_profile \
+        && cp /opt/configs/bash_profile /home/gpadmin/.bash_profile \
+        && cp /opt/configs/bashrc_template /home/gpadmin/.bashrc \
         && chown -R gpadmin: /home/gpadmin \
         && mkdir -p /gpdata/master /gpdata/segments \
         && chown -R gpadmin: /gpdata \
         && chown -R gpadmin: /usr/local/green* \
         && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
 
+EXPOSE 22
 
+# Set the locale
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# Create the ssh host keys needed for sshd
+RUN ssh-keygen -A
+
+# Fix sshd's configuration for use within the container. See VW-10576 for details.
+RUN sed -i -e 's/^UsePAM .*/UsePAM no/' /etc/ssh/sshd_config
+RUN sed -i -e 's/^PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+
+RUN /usr/sbin/sshd -D &
 
 ##############################################################################
 #       root user
@@ -96,8 +111,8 @@ RUN   ssh-keygen -f /root/.ssh/id_rsa -N '' && \
       && echo "gpdbsne" > /tmp/gpdb-hosts \
       && cp /opt/configs/gpinitsystem_singlenode /tmp \
       && chmod 777 /tmp/gpinitsystem_singlenode \
-      && hostname > ~/orig_hostname \
-      && hostname > /tmp/orig_hostname \
+      && cat /etc/HOSTNAME > ~/orig_hostname \
+      && cat /etc/HOSTNAME > /tmp/orig_hostname \
       && echo "127.0.0.1 gpdbsne gpdbsne.localdomain" >> /etc/hosts \
       && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
       && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc"
@@ -110,9 +125,10 @@ EXPOSE 40000 40001 40002
 
 VOLUME /data
 # Set the default command to run when starting the container
-RUN   systemctl enable sshd.service
-# ENTRYPOINT ["/bin/bash"]
 
+RUN cd /usr/local/bin \
+    && wget https://raw.githubusercontent.com/ikysil/run-parts/master/run-parts \
+    && chmod +x /usr/local/bin/run-parts
 
 
 ################################################################################
@@ -133,4 +149,3 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Default command
 CMD ["bin/bash"]
-################################################################################
