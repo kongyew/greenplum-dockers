@@ -1,3 +1,7 @@
+
+
+
+
 [gpadmin@gpdbsne ~]$ gpcheckcloud -c "s3://minio1:9000/testbucket config=/home/gpadmin/s3.conf"
 File: read_stocks.sql, Size: 586
 File: stocks.csv, Size: 12246

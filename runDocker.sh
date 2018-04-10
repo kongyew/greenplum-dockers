@@ -44,6 +44,44 @@ function RunCloudera()
   fi
 }
 ################################################################################
+function RunPostgres8_3()
+{
+  echo "[RunPostgres8_3] Command:  $1"
+  COMMAND=$1
+
+  if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    exit -1;
+  else
+    if [[ "${COMMAND}" == "up" ]]; then
+        $DC_POSTGRES8_3_SCRIPT up
+    elif [[ "${COMMAND}" == "down" ]]; then
+         $DC_POSTGRES8_3_SCRIPT down
+    else # default option
+        $DC_POSTGRES8_3_SCRIPT up
+    fi
+  fi
+}
+################################################################################
+function RunPostgres9_6()
+{
+  echo "[RunPostgres9_6] Command:  $1"
+  COMMAND=$1
+
+  if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    exit -1;
+  else
+    if [[ "${COMMAND}" == "up" ]]; then
+        $DC_POSTGRES9_6_SCRIPT up
+    elif [[ "${COMMAND}" == "down" ]]; then
+         $DC_POSTGRES9_6_SCRIPT down
+    else # default option
+        $DC_POSTGRES9_6_SCRIPT up
+    fi
+  fi
+}
+################################################################################
 function RunMinio()
 {
   echo "[RunMinio] Command:  $1"
@@ -115,6 +153,10 @@ else
      echo "test"
   elif [[ "${TYPE}" == "minio" ]]; then
       RunMinio  "${COMMAND}"
+  elif [[ "${TYPE}" == "postgres9.6" ]]; then
+        RunPostgres9_6  "${COMMAND}"
+  elif [[ "${TYPE}" == "postgres8.3" ]]; then
+        RunPostgres9_6  "${COMMAND}"
   else # default option
        echo "test"
   fi

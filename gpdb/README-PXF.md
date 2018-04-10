@@ -1,5 +1,5 @@
-# Building Greenplum docker images
-You can use these scripts to build Greenplum docker files for 4.3.x , 5.x and Open Source.
+# Building Greenplum docker with PXF configuration
+This document describes how to create docker image with PXf configuraiton.
 
 
 # Building the Docker Image with Pivotal Network binaries
@@ -8,10 +8,7 @@ You can use these scripts to build Greenplum docker files for 4.3.x , 5.x and Op
 - Pivotal Greenplum binaries.
 
 ## Downloading Pivotal Greenplum binaries
-Follow the instructions under the folder greenplum_downloaders
 
-## Building docker image for Centos or SUSE
-You can build Greenplum docker image with Centos 7 by using "build_docker.sh"
 ```
 $ ./build_docker.sh -i 5.4.1-rhel6-x86_64
 ```

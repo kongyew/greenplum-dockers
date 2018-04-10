@@ -4,7 +4,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . ${DIR}/config.sh
 
 
-
 while getopts ":ht:" opt; do
   case $opt in
     t)
@@ -39,14 +38,24 @@ export CONTAINER_ID=`docker ps  -q --filter ancestor="${DOCKER_TAG}" --format="{
 
 docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
 docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/setupPXF.sh"
+docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/setupPXFHadoop.sh"
 docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startPXF.sh"
+docker exec  -i -t ${CONTAINER_ID} "/usr/bin/rm greenplum-db-*.bin"
+docker exec  -i -t ${CONTAINER_ID} "/usr/bin/bash"
 
 echo "Commit docker image"
 export CONTAINER_ID=`docker ps -a -n=1 -q`
 docker commit -m "${DOCKER_PXF_LABEL}" -a "author" ${CONTAINER_ID} ${DOCKER_PXF_TAG}
 
+# Export images to a file
+#docker save ${DOCKER_PXF_TAG} > /tmp/PXF.tar
+
+# docker commit -m "GPDB 5-PXF" -a "author" ${CONTAINER_ID} kochanpivotal/gpdb5-pxf
+
 echo  "Stop docker :`docker ps | grep  ${CONTAINER_NAME}  | awk '{print $1}'`"
 docker ps | grep  ${CONTAINER_NAME}  | awk '{print $1}' | xargs docker stop
 
+echo "Stop all dockers"
+docker stop $(docker ps -aq)
 
 #docker run  -it --hostname=gpdbsne "kochan/gpdb5-pxf"  bin/bash

@@ -8,12 +8,12 @@ You can use these scripts to build Greenplum docker files for 4.3.x , 5.x and Op
 - Pivotal Greenplum binaries.
 
 ## Downloading Pivotal Greenplum binaries
-Follow the instructions under the folder greenplum_downloaders
+Follow the instructions under the folder [greenplum_downloaders](https://github.com/kongyew/greenplum-downloader/)
 
 ## Building docker image for Centos or SUSE
 You can build Greenplum docker image with Centos 7 by using "build_docker.sh"
 ```
-$ ./build_docker.sh -i 5.4.1-rhel6-x86_64
+$ ./build_docker.sh -i 5.7.0-rhel6-x86_64
 ```
 
 You can build Greenplum docker image with Centos 7 by using "build_docker.sh"

@@ -1,0 +1,53 @@
+version: '2'
+services:
+  postgres:
+    image: sameersbn/postgresql:9.6-2
+    hostname: "postgresql96"
+    container_name: postgresql96
+    ports:
+      - "6432:5432"
+    environment:
+     DB_USER: dbuser
+     DB_PASS: dbuserpass
+     DB_NAME: DBNAME
+    volumes:
+       - ..:/code
+    tty: true
+    privileged: true
+    links:
+         - gpdb5:gpdbsne
+    networks:
+      mynetwork:
+        aliases:
+          - postgresql96
+          - postgresql96.localdomain.com
+  gpdb5:
+        #build:
+        #  context: .
+        #  dockerfile: ./gpdb/Dockerfile
+        image: "kochanpivotal/gpdb5-pxf"
+        command: bin/bash
+        hostname: "gpdbsne"
+        container_name: gpdbsne
+        ports:
+         - "5432:5432"
+         - "5005:5005"
+         - "5010:5010"
+         - "9022:22"
+         - "40000:40000"
+         - "40001:40001"
+         - "40002:40002"
+        expose:
+         - "5432"
+        volumes:
+         - ..:/code
+
+        tty: true
+        networks:
+          mynetwork:
+            aliases:
+              - gpdbsne
+              - gpdbsne.localdomain.com
+networks:
+    mynetwork:
+      driver: bridge

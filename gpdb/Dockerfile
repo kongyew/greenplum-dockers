@@ -8,8 +8,8 @@ FROM centos/systemd
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.4.1-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.4.1"
+ARG GPDB_VERSION="5.7.0-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.7.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
@@ -100,7 +100,9 @@ RUN   ssh-keygen -f /root/.ssh/id_rsa -N '' && \
       && hostname > /tmp/orig_hostname \
       && echo "127.0.0.1 gpdbsne gpdbsne.localdomain" >> /etc/hosts \
       && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
-      && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc"
+      && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
+      && rm -f /tmp/greenplum-db-${GPDB_VERSION}.bin
+
 
 
 ################################################################################

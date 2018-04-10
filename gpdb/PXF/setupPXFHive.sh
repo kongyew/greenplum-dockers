@@ -5,7 +5,7 @@ set -e
 export GPDB_HOSTS=/tmp/gpdb-hosts
 source /usr/local/greenplum-db/greenplum_path.sh
 
-export CLOUDERA_HIVE_DOWNLOAD_URL=http://archive.cloudera.com/cdh5/cdh/5/hive-1.1.0-cdh5.10.2.tar.gz
+export CLOUDERA_HIVE_DOWNLOAD_URL=http://archive.cloudera.com/cdh5/cdh/7/hive-1.1.0-cdh5.10.2.tar.gz
 export CLOUDERA_HIVE_TAR_GZ=hive-1.1.0-cdh5.10.2.tar.gz
 export CLOUDERA_HIVE_DIR=hive-1.1.0-cdh5.10.2
 
@@ -40,8 +40,15 @@ function InstallCDHHive_RPM()
   echo "Run 'sudo yum -y install hive' on all segments"
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "sudo yum -y install hive"
 
+  echo "Run 'sudo yum list installed hive"
+  gpssh -e -v -f ${GPDB_HOSTS} -u root yum list installed hive
+
   echo "Run 'sudo yum -y install hbase' on all segments"
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "sudo yum -y install hbase"
+
+  echo "Run 'sudo yum list installed hbase"
+  gpssh -e -v -f ${GPDB_HOSTS} -u root yum list installed hbase
+
 }
 ###############################################################################
 

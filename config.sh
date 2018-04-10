@@ -11,3 +11,6 @@ export DC_GPDB_SCRIPT="docker-compose -f ./docker-compose-gpdb.yml"
 export DC_CLOUDERA_SCRIPT="docker-compose -f ./cloudera/docker-compose-cloudera.yml"
 export DC_MAPR_SCRIPT="docker-compose -f ./mapr/docker-compose-mapr.yml"
 export DC_MINIO_SCRIPT="docker-compose -f ./minio/docker-compose-minio.yml"
+
+export DC_POSTGRES9_6_SCRIPT="docker-compose -f ./postgres/docker-compose-postgres9.6.yml"
+export DC_POSTGRES8_3_SCRIPT="docker-compose -f ./postgres/docker-compose-postgres8.3.yml"
