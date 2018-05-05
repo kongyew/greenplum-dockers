@@ -21,4 +21,5 @@ test.main
 .*.swp
 .DS_Store
 ${SSH*}
+${SSH*}.bak
 *.tar
