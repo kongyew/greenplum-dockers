@@ -6,18 +6,15 @@ FROM opensuse:42.3
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.5.0-sles11-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.5.0"
+ARG GPDB_VERSION="5.7.0-sles11-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.7.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
-
 ################################################################################
-
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
-
 
 
 COPY ${GPDB_DOWNLOAD}/madlib-*.tar.gz /tmp/

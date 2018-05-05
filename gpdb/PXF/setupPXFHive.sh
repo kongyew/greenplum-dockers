@@ -38,6 +38,21 @@ function InstallCDHHive_TAR_GZ()
 function InstallCDHHive_RPM()
 {
   echo "Run 'sudo yum -y install hive' on all segments"
+  sudo yum -y install hive
+
+  echo "Run 'sudo yum list installed hive"
+  sudo yum list installed hive
+
+  echo "Run 'sudo yum -y install hbase' on all segments"
+  sudo yum -y install hbase
+
+  echo "Run 'sudo yum list installed hbase"
+  sudo yum list installed hbase
+
+}
+function InstallCDHHive_RPM_ALLSEGMENTS()
+{
+  echo "Run 'sudo yum -y install hive' on all segments"
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "sudo yum -y install hive"
 
   echo "Run 'sudo yum list installed hive"

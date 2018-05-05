@@ -1,0 +1,31 @@
+version: "3"
+services:
+  master:
+    image: puckel/docker-airflow
+    hostname: airflow
+    ports:
+      - 8080:8080
+    volumes:
+      - ..:/code
+
+  gpdb:
+      image: "kochanpivotal/gpdb5oss"
+      hostname: "gpdb5oss"
+      command: bash
+      container_name: gpdb5oss
+      ports:
+       - "9090:9090"
+       - "5432:5432"
+       - "5005:5005"
+       - "5010:5010"
+       - "9022:22"
+       - "40000:40000"
+       - "40001:40001"
+       - "40002:40002"
+      expose:
+       - "5432"
+      volumes:
+       - ..:/code
+      links:
+       - master
+      tty: true

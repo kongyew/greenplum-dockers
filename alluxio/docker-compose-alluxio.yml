@@ -1,0 +1,102 @@
+version: '3'
+version: "3"
+
+services:
+
+  alluxio-client:
+    hostname: alluxio-client
+    container_name: alluxio-client
+    image: kochanpivotal/alluxio:latest
+    build:
+      context:  .
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+    env_file:
+      - docker-compose.env
+    environment:
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+
+  alluxio-master:
+    hostname: alluxio-master
+    container_name: alluxio-master
+    image: kochanpivotal/alluxio:latest
+    command: master
+    privileged: true
+    env_file:
+      - docker-compose.env
+    environment:
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+
+  alluxio-worker-0:
+    hostname: alluxio-worker-0
+    container_name: alluxio-worker-0
+    image: kochanpivotal/alluxio:latest
+    command: worker
+    privileged: true
+    env_file:
+      - docker-compose.env
+    environment:
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+    links:
+      - alluxio-master
+
+  alluxio-worker-1:
+    hostname: alluxio-worker-1
+    container_name: alluxio-worker-1
+    image: kochanpivotal/alluxio:latest
+    command: worker
+    privileged: true
+    env_file:
+      - docker-compose.env
+    environment:
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+    links:
+      - alluxio-master
+  gpdb5:
+          #build:
+          #  context: .
+          #  dockerfile: ./gpdb/Dockerfile
+          image: "kochanpivotal/gpdb5oss"
+          command: "bin/bash;/usr/local/bin/startGPDB.sh"
+          hostname: "gpdbsne"
+          container_name: gpdbsne
+          ports:
+           - "5432:5432"
+           - "5005:5005"
+           - "5010:5010"
+           - "9022:22"
+           - "40000:40000"
+           - "40001:40001"
+           - "40002:40002"
+          expose:
+           - "5432"
+          volumes:
+           - ..:/code
+          privileged: true
+          tty: true
+          networks:
+            mynetwork:
+              aliases:
+                - gpdbsne
+                - gpdbsne.localdomain.com
+networks:
+    mynetwork:
+      driver: bridge
+
+
+## By default this config uses default local driver,
+## For custom volumes replace with volume driver configuration.
+volumes:
+  data1:
+  data2:
+  data3:
+  data4:
+  # data1:/tmp/data1
+  # data2:/tmp/data2
+  # data3:/tmp/data3
+  # data4:/tmp/data4

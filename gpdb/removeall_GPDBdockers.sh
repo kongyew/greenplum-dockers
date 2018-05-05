@@ -26,6 +26,11 @@ if docker images |grep ${DOCKER_MADLIB_TAG}; then
      docker rmi -f ${DOCKER_MADLIB_TAG}
 fi
 
+echo "Remove docker image with tag:  ${DOCKER_LATEST_OSS_TAG}"
+if docker images |grep ${DOCKER_LATEST_OSS_TAG}; then
+     docker rmi -f ${DOCKER_LATEST_OSS_TAG}
+fi
+
 echo "Remove docker image with tag:  ${DOCKER_ALLUXIO_TAG}"
 if docker images |grep "${DOCKER_ALLUXIO_TAG}"; then
      docker rmi -f "${DOCKER_ALLUXIO_TAG}"

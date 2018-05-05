@@ -1,0 +1,94 @@
+version: '2'
+services:
+  mapr-control:
+    image: docker.io/maprtech/mapr-control-cent67:5.2.2
+    hostname: "mapr-control.mapr.io"
+    container_name: mapr-control
+    entrypoint: # fallocate -l 1G /tmp/storagefilea dd if=/dev/zero of=/opt/mapr/disks/storagefilea bs=1G count=1
+               /bin/sh -c "chmod +x   /opt/mapr/disks/init.sh &&
+              /opt/mapr/disks/init.sh  && bin/bash"
+    environment:
+      - CLDBIP=mapr-control.mapr.io
+      - CLUSTERNAME=mapr-cluster
+      - MEMTOTAL=1024
+      - DISKLIST=/tmp/disks
+    ports:
+      - "5022:22"       # ssh
+      - "7222:7222"     # CLDB node list
+      - "5181:5181"     # Zookeeper node list
+      - "8443:8443"     # UI
+    volumes:
+       - ..:/code
+       - .:/opt/mapr/disks/
+    tty: true
+    privileged: true
+    links:
+         - gpdb5:gpdbsne
+    networks:
+      mynetwork:
+        aliases:
+          - mapr-control
+          - mapr-control.mapr.io
+          - mapr-cluster
+          - mapr-cluster.mapr.io
+
+  # mapr-data:
+  #   image: docker.io/maprtech/mapr-data-cent67:5.2.2
+  #   hostname: "mapr-clusterd1.mapr.io"
+  #   container_name: mapr-clusterd1
+  #   entrypoint:
+  #            /bin/sh -c "chmod +x   /opt/mapr/disks/init-slave.sh   &&
+  #           /opt/mapr/disks/init-slave.sh && bin/bash"
+  #   # entrypoint:
+  #   #        /bin/sh -c "
+  #   #       mkdir -p /opt/mapr/disks && fallocate -l 10G /opt/mapr/disks/docker.disk;
+  #   #      hadoop fs -mkdir /tmp;"
+  #   environment:
+  #       - CLDBIP=mapr-control.mapr.io
+  #       - CLUSTERNAME=mapr-cluster
+  #       - MEMTOTAL=1024
+  #       - DISKLIST=/tmp/disks
+  #   ports:
+  #       - "6022:22"     # ssh
+  #
+  #   volumes:
+  #       - ..:/code
+  #       - .:/opt/mapr/disks/
+  #   tty: true
+  #   privileged: true
+  #   depends_on:
+  #     -  mapr-control
+  #   links:
+  #       - gpdb5:gpdbsne
+  #   networks:
+  #     mynetwork:
+  #       aliases:
+  #         - mapr-clusterd1
+  #         - mapr-clusterd1.mapr.io
+  gpdb5:
+        image: "kochanpivotal/gpdb5"
+        command: bin/bash
+        hostname: "gpdbsne"
+        container_name: gpdbsne
+        ports:
+         - "5432:5432"
+         - "5005:5005"
+         - "5010:5010"
+         - "9022:22"
+         - "40000:40000"
+         - "40001:40001"
+         - "40002:40002"
+        expose:
+         - "5432"
+        volumes:
+         - ..:/code
+        privileged: true
+        tty: true
+        networks:
+          mynetwork:
+            aliases:
+              - gpdbsne
+              - gpdbsne.localdomain.com
+networks:
+    mynetwork:
+      driver: bridge

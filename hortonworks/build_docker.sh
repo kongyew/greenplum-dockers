@@ -1,24 +1,36 @@
 #!/bin/bash
-export DOCKER_LABEL="hortonworks"
-export DOCKER_TAG="kochan/hortonworks"
-
-# echo "Remove docker image"
-# if docker images |grep ${DOCKER_TAG}; then
-#     docker rmi -f ${DOCKER_TAG}
-# fi
-
-#docker pull cloudera/quickstart:latest
-echo "docker load -i <sandbox-docker-image-path>"
-docker load -i HDP_2_6_1_docker_image_28_07_2017_14_42_40.tar
-docker tag $DOCKER_TAG sandbox-hdf
-# Build docker image
-echo "Build docker image"
-docker run -i -t -h sandbox-hdf \
-    ${DOCKER_TAG} bin/bash
+# Including configurations
+. config.sh
 
 
-#docker run --hostname=quickstart.cloudera --privileged=true -t -i -p 8888:8888 -p 80:80 -p 7180:7180  -p 8020:8020 -p 50075:50075 kochan/cloudera:latest  /usr/bin/docker-quickstart
-#echo "Commit docker image"
+if [ -e ${HORTON_TAR_FILE} ]
+then
+  echo "docker load < ${HORTON_TAR_FILE}"
+  docker load < ${HORTON_TAR_FILE}
+else
+    echo "Cannot find this file: ${HORTON_TAR_FILE}"
+    exit 1
+fi
 
-#export CONTAINER_ID=`docker ps -a -n=1 -q`
-#docker commit -m "${DOCKER_LABEL}" -a "author" ${CONTAINER_ID} ${DOCKER_TAG}
+#docker tag $HORTONWORKS_TAG $DOCKER_TAG
+
+echo "Find docker image with tag:  ${DOCKER_HORTONWORKS_TAG}"
+if docker images |grep "${DOCKER_HORTONWORKS_TAG}"; then
+
+  # Build docker image
+  echo "Build docker image"
+  docker run -it -h sandbox-hdp  ${DOCKER_HORTONWORKS_TAG} bin/bash
+  # docker run --interactive  --privileged --tty -h "${CONTAINER_NAME}" \
+  #       -v /sys /fs/cgroup:/sys/fs/cgroup:ro  \
+  #      "${DOCKER_TAG}" /bin/bash -c "ls -la /opt"
+
+  echo "Commit docker image"
+  export CONTAINER_ID=`docker ps -a -n=1 -q`
+  docker commit -m "${DOCKER_LABEL}" -a "author" "${CONTAINER_ID}" "${DOCKER_LATEST_TAG}"
+
+  echo "Stop docker image"
+  docker stop "${CONTAINER_ID}"
+else
+  echo "Cannot find docker image ${DOCKER_HORTONWORKS_TAG}"
+
+fi

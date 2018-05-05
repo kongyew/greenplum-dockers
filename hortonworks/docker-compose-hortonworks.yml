@@ -1,0 +1,109 @@
+version: '3'
+services:
+  hortonworks:
+    image: sandbox-hdp
+  #  command: /usr/sbin/sshd -D
+    #;/home/cloudera/cloudera-manager --express
+    hostname: "sandbox.hortonworks.com"
+    environment:
+      - COMPOSE_HTTP_TIMEOUT=120 # default is 60
+    ports:
+      - "6080:6080"
+      - "9090:9090"
+      - "9000:9000"
+      - "8000:8000"
+      - "8020:8020"
+      - "42111:42111"
+      - "10500:10500"
+      - "16030:16030"
+      - "8042:8042"
+      - "8040:8040"
+      - "2100:2100"
+      - "4200:4200"
+      - "4040:4040"
+      - "8050:8050"
+      - "9996:9996"
+      - "9995:9995"
+      - "8080:8080"
+      - "8088:8088"
+      - "8886:8886"
+      - "8889:8889"
+      - "8443:8443"
+      - "8744:8744"
+      - "8888:8888"
+      - "8188:8188"
+      - "8983:8983"
+      - "1000:1000"
+      - "1100:1100"
+      - "11000:11000"
+      - "10001:10001"
+      - "15000:15000"
+      - "10000:10000"
+      - "8993:8993"
+      - "1988:1988"
+      - "5007:5007"
+      - "50070:50070"
+      - "19888:19888"
+      - "16010:16010"
+      - "50111:50111"
+      - "50075:50075"
+      - "50095:50095"
+      - "18080:18080"
+      - "60000:60000"
+      - "8090:8090"
+      - "8091:8091"
+      - "8005:8005"
+      - "8086:8086"
+      - "8082:8082"
+      - "60080:60080"
+      - "8765:8765"
+      - "5011:5011"
+      - "6001:6001"
+      - "6003:6003"
+      - "6008:6008"
+      - "1220:1220"
+      - "21000:21000"
+      - "6188:6188"
+      - "61888:61888"
+      - "2181:2181"
+      - "2222:22"
+    volumes:
+       - ..:/code
+    tty: true
+    privileged: true
+    links:
+         - gpdb5:gpdbsne
+    networks:
+      mynetwork:
+        aliases:
+          - sandbox.hortonworks.com
+  gpdb5:
+        #build:
+        #  context: .
+        #  dockerfile: ./gpdb/Dockerfile
+        image: "kochanpivotal/gpdb5-pxf"
+        command: bin/bash
+        hostname: "gpdbsne"
+        container_name: gpdbsne
+        ports:
+         - "5432:5432"
+         - "5005:5005"
+         - "5010:5010"
+         - "9022:22"
+         - "40000:40000"
+         - "40001:40001"
+         - "40002:40002"
+        expose:
+         - "5432"
+        volumes:
+         - ..:/code
+        privileged: true
+        tty: true
+        networks:
+          mynetwork:
+            aliases:
+              - gpdbsne
+              - gpdbsne.localdomain.com
+networks:
+    mynetwork:
+      driver: bridge

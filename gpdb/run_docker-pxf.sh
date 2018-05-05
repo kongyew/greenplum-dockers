@@ -6,9 +6,7 @@
 # Including configurations
 . config.sh
 
-export BUILD_ENV="test"
-VOLUME=$(pwd)
-CONTAINER_NAME='gpdb5pxf'
+
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Including configurations
@@ -32,3 +30,12 @@ docker run  -it --hostname=gpdbsne \
     --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
     --volume "${VOLUME}":/code \
     "${DOCKER_PXF_TAG}" bin/bash
+
+    # 
+    # docker run  -it --hostname=gpdbpxf \
+    #     --name gpdbpxf \
+    #     --privileged \
+    #     --publish 5432:5432 \
+    #     --publish 88:22 \
+    #     --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
+    #     "kochanpivotal/gpdb5-pxf" bin/bash

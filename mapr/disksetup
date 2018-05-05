@@ -1,0 +1,1484 @@
+#!/usr/bin/python
+# Copyright (c) 2009 & onwards. MapR Tech, Inc., All rights reserved
+
+import re
+import os
+import sys
+import signal
+import stat
+import errno
+import getopt
+import commands
+import subprocess
+import logging
+import operator
+import inspect
+import traceback
+import time
+import fcntl
+import string
+
+Port=5660
+Host="127.0.0.1"
+StripeWidth=3
+StripeDepth=128
+MaxStripeWidth=24
+
+UseBigLog=0
+BigLogSize=65536 # 512MB
+
+currDiskPath="FirstDisk" #ToReportError
+mrdiskOutput=""
+DiskTabLockFile="/tmp/disktabAccess.lock"
+diskListFile = "/tmp/disklist.txt";
+MfsPath = "/opt/mapr/initscripts/mapr-mfs"
+MapRHome="/opt/mapr";
+MapRLogs="/opt/mapr/logs";
+ServerData="/opt/mapr/server/data";
+ConfigCmd="/opt/mapr/server/mrconfig"
+ConfigCmdForInstance=ConfigCmd
+MapRExecute="/opt/mapr/server/maprexecute"
+MrTrim="/opt/mapr/server/mrtrim"
+LogFileName="/opt/mapr/logs/disksetup.log"
+DiskTabFile="/opt/mapr/conf/disktab"
+DaemonConfFile="/opt/mapr/conf/daemon.conf"
+DiskTabBackupFile="/opt/mapr/conf/disktab.bak"
+ClusterConfFile="/opt/mapr/conf/mapr-clusters.conf"
+MRDiskCmd="/opt/mapr/server/mrdisk"
+CLDBRolePath="/opt/mapr/roles/cldb"
+UdevRuleFilePath = "/lib/udev/rules.d/99-mapr-disk.rules"
+BkupRulesFilePath = "/tmp/99-mapr-disk.rules.bak.%d" % os.getpid();
+MFSConfFile="/opt/mapr/conf/mfs.conf"
+MapRGroup=""
+MapRUser="mapr"
+cid = 0;
+gdisks = [];
+procPartsDisks = [];
+diskTabDisks = [];
+diskTabGuids = [];
+spList = [];
+gdevices = set();
+force = "";
+quiet = False;
+UdevModified = False;
+UdevRunning = True;
+#Help messages
+DefaultHelp = "Please check %s for clues" % (MapRLogs);
+MfsFailHelp = "Local Fileserver failed to start. Disks cannot be formatted" + \
+              DefaultHelp;
+
+help = "";
+myMfsStarted = False;
+generateDiskTabOnly = False;
+fixDiskTabOnly = False;
+useSudo = False;
+changeScheduler = True;
+isTrimEnabled = True;
+
+def InitMapRPaths():
+  global MapRHome;
+  global MapRLogs;
+  global DiskTabFile;
+  global ClusterConfFile;
+  global MRDiskCmd;
+  global CLDBRolePath;
+  global UdevRuleFilePath;
+  global MFSConfFile;
+  MapRHome = os.environ.get("MAPR_HOME");
+  if not MapRHome:
+    MapRHome="/opt/mapr";
+
+  if not os.path.exists(MapRHome):
+    print "MAPR_HOME=%s does not exist" % (MapRHome);
+    sys.exit(1);
+
+  MapRLogs = os.path.join(MapRHome, "logs");
+  if not os.path.exists(MapRLogs):
+    os.mkdir(MapRLogs);
+
+  MapRExecute = os.path.join(MapRHome, "server/maprexecute");
+  DaemonConfFile = os.path.join(MapRHome, "conf/daemon.conf");
+  DiskTabFile = os.path.join(MapRHome, "conf/disktab");
+  DiskTabBackupFile = os.path.join(MapRHome, "conf/disktab.bak");
+  ClusterConfFile= os.path.join(MapRHome, "conf/mapr-clusters.conf");
+  MFSConfFile= os.path.join(MapRHome, "conf/mfs.conf");
+
+  InitConfigCmd();
+
+  MRDiskCmd = os.path.join(MapRHome, "server/mrdisk");
+  CLDBRolePath= os.path.join(MapRHome, "roles/cldb");
+  if (os.path.exists("/lib/udev/rules.d")):
+    UdevRuleFilePath = "/lib/udev/rules.d/99-mapr-disk.rules";
+  elif (os.path.exists("/etc/udev/rules.d")):
+    UdevRuleFilePath = "/etc/udev/rules.d/99-mapr-disk.rules";
+  else:
+    UdevRuleFilePath = "";
+    tlog.error("udev/rules.d: udev rules directory not found");
+# ... end of InitMapRPaths
+
+def InitConfigCmd():
+  global MapRHome;
+  global ConfigCmd;
+  global Port;
+  ConfigCmd = os.path.join(MapRHome, "server/mrconfig");
+  ConfigCmd += " -h %s -p %d " % (Host, Port);
+
+  ConfigCmdForInstance = ConfigCmd;
+# ... end of InitConfigCmd
+
+def InitLogging():
+  global tlog;
+  LogFileName = os.path.join(MapRLogs, "disksetup.%d.log" % os.geteuid());
+  print "test LogFileName" + LogFileName
+  formatString = "%(asctime)s %(process)d %(funcName)s:%(lineno)d %(levelname)s %(message)s";
+  if sys.version_info < (2,  5):
+    formatString = "%(asctime)s %(process)d :%(lineno)d %(levelname)s %(message)s";
+  LogFormat = logging.Formatter(formatString);
+  tlog = logging.getLogger('disksetup')
+  handler = logging.FileHandler(LogFileName);
+  handler.setFormatter(LogFormat)
+  tlog.addHandler(handler)
+  tlog.setLevel(logging.DEBUG)
+  tlog.info("\n\n***** Starting disksetup: PID %d *****\n" % (os.getpid()));
+# ... end of InitLogging
+
+def checkIfSSD(devName):
+  fpath = "/sys/block/%s/queue/rotational"  % (devName);
+  try:
+    fh = open(fpath, "r")
+    out = fh.read(1);
+    fh.close();
+  except IOError as e:
+    tlog.warn("cannot open %s" % (fpath));
+    return False;
+  if (string.atoi(out)):
+    return False;
+  return True;
+
+def setScheduler(diskPath):
+  global useSudo;
+  # setting scheduler makes sense for blokdev only
+  mode = os.stat(diskPath).st_mode
+  if not stat.S_ISBLK(mode):
+    return;
+  # extract the device name
+  devName = os.path.basename(diskPath);
+  # if devname is Null return
+  if not devName:
+    return
+  isSSD = checkIfSSD(devName)
+  if isSSD and useSudo:
+    cmd = "%s setIOscheduler %s noop" % (MapRExecute, devName);
+    RunCmd(cmd, cmd);
+    return;
+  if isSSD:
+    fpath = "/sys/block/%s/queue/scheduler"  % (devName);
+    try:
+      fh = open(fpath, "r+");
+      fh.write("noop");
+      fh.close();
+    except IOError as e:
+      tlog.warn("cannot change to NOOP for %s" % (fpath));
+
+def GetMapRUserAndGroup():
+  if not os.path.exists(DaemonConfFile):
+    tlog.warn(DaemonConfFile + " does not exist");
+    return;
+  fh = open(DaemonConfFile, "r");
+  global MapRGroup;
+  global MapRUser;
+  for line in fh:
+    line = line.strip();
+    if line.startswith("mapr.daemon.group"):
+      words = line.split("=");
+      MapRGroup = words[1];
+      continue
+    if line.startswith("mapr.daemon.user"):
+      words = line.split("=");
+      MapRUser = words[1];
+      continue
+  if MapRGroup == "":
+    tlog.info("MapRGroup is not set");
+# ... end of GetMapRUserAndGroup
+
+def GetTrimStatusFromMFSConf():
+  if not os.path.exists(MFSConfFile):
+    tlog.warn(MFSConfFile + " does not exist");
+    return;
+  fh = open(MFSConfFile, "r");
+  global isTrimEnabled;
+  for line in fh:
+    line = line.strip();
+    if line.startswith("mfs.ssd.trim.enabled"):
+      words = line.split("=");
+      if (words[1] == "0"):
+        isTrimEnabled = False;
+      continue
+# ... end of GetTrimStatusFromMFSConf
+
+def LogExceptionHook(*exc_info):
+  text = "".join(traceback.format_exception(*exc_info));
+  tlog.error("Generic exception handler: %s", text);
+  AbortWithError(errno.EUCLEAN, "\n" + text);
+# ... end of LogExceptionHook
+
+def ExitDiskSetup(msg="Exiting ..."):
+  LogCurrentInfo("Abort");
+  RestoreUdevRules();
+  if not myMfsStarted:
+    UnloadAllDisks();
+    UnloadAllDisks();
+  StopMyMfs();
+  tlog.error(msg);
+  sys.exit(1);
+# ... end of ExitDiskSetup
+
+def InterruptSignalHandler(signum, stack):
+  frame = inspect.currentframe()
+  stack_trace = traceback.format_stack(frame)
+  tlog.error(repr(stack_trace))
+  msg = "Disksetup aborted by user.";
+  errorMsg = "%s Handler for signal:%d" % (msg, signum);
+  tlog.error(errorMsg);
+  print msg;
+  ExitDiskSetup(errorMsg);
+# ... end of InterruptSignalHandler
+
+def AbortWithError(err, amsg="Aborting with error", path=""):
+  abortMsg = ""
+  if path == "":
+    if quiet:
+      abortMsg = "%s failed. " % (currDiskPath);
+  else:
+    abortMsg = "%s failed. " % (path);
+
+  abortMsg += "Error %d, %s. " % (err, os.strerror(err));
+  abortMsg += amsg;
+  print abortMsg;
+  if not quiet:
+    if (help != ""):
+      print help;
+  frame = inspect.currentframe()
+  stack_trace = traceback.format_stack(frame)
+  errorMsg = abortMsg + repr(stack_trace);
+  tlog.error(errorMsg);
+  ExitDiskSetup(errorMsg);
+# ... end of AbortWithError
+
+def RunCmd(cmd, msg="RunCmd", ignoreError=False):
+  tlog.info(msg + ":\n" + cmd);
+  rc, output =  commands.getstatusoutput(cmd);
+  if (rc):
+    tlog.error("rc=%d" % (rc >> 8));
+    tlog.error(output);
+    rc >>= 8;
+    if (ignoreError):
+      errMsg = "%s tried. err %d" % (msg, rc);
+      tlog.info(errMsg);
+      return rc, output;
+    if not quiet:
+      print output
+    AbortWithError(rc, msg);
+  return 0, output;
+# ... end of RunCmd
+
+def RunCmdNoWait(cmd, msg="RunCmdNoWait"):
+  p = subprocess.Popen(cmd, shell=True )
+  tlog.info(msg + ": " + cmd + ": shell pid: " + str(p.pid));
+  return p
+
+
+def SetCurrDiskPath(path):
+  global currDiskPath;
+  currDiskPath = path;
+# ... end of SetCurrDiskPath
+
+def GetGID(group):
+  cmd = "id -g %s" % group;
+  rc, output = RunCmd(cmd, "Get gid of MaprGroup");
+  return long(output);
+# ... end of RunCmd
+
+def ChangeMode(devicePath, mode, ignoreError=False):
+  cmd =  "chmod %s %s" % (mode, devicePath);
+  msg = "Change mode: %s" % (cmd);
+  SetCurrDiskPath(devicePath);
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  return rc, output;
+# ... end of ChangeMode
+
+def ChangeGroup(devicePath, group, ignoreError=False):
+  cmd =  "chgrp %s %s" % (group, devicePath);
+  msg = "Change group %s" % (devicePath);
+  SetCurrDiskPath(devicePath);
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  return rc, output;
+# ... end of ChangeGroup
+
+def ChangeOwner(filename, user='mapr', ignoreError=True):
+  if not os.geteuid() == 0:
+    # not root user
+    return
+
+  cmd = "chown %s:%s %s" % (user, user, filename);
+  msg = "Change owner %s" % (filename);
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  if rc:
+    tlog.error("Change owner failed for file %s Error %d.\n %s" %
+        (filename, rc, output));
+  return;
+# ... end of ChangeOwner
+
+def ChangePerm(devicePath, group, ignoreError=False):
+  global useSudo;
+  if (group == ""):
+    return;
+  if not os.path.exists(devicePath):
+    if (ignoreError) :
+      return errno.ENODEV, "MissingDeviceFile";
+    AbortWithError(errno.ENODEV, "Missing device file.", devicePath);
+  if useSudo:
+    cmd = "%s allowaccess %s" % (MapRExecute, devicePath);
+    return RunCmd(cmd, cmd);
+
+  ChangeMode(devicePath, "g+rw", ignoreError);
+  return ChangeGroup(devicePath, group, ignoreError);
+# ... end of ChangePerm
+
+def ResetConfigCmdForInstance(numaid, ignoreError=True):
+  global ConfigCmdForInstance;
+  if numaid == -1:
+    cmd =  ConfigCmd + " sp getslot"
+  else:
+    cmd =  ConfigCmd + " sp getslot -n %d" % numaid;
+  msg = "SP NewSlot"
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  if rc:
+    tlog.error("SP Getnewslot failed. Error %d.\n %s" % (rc, output));
+    return;
+  instancePort = long(output);
+  ConfigCmdForInstance = os.path.join(MapRHome, "server/mrconfig");
+  ConfigCmdForInstance += " -h %s -p %d " % (Host, instancePort);
+  tlog.info("New SP Slot %d, ConfigCmdForInstance: %s" % (instancePort, ConfigCmdForInstance));
+# ... end of ResetConfigCmdForInstance
+
+def SPRefresh(ignoreError=True):
+  cmd =  ConfigCmd + " sp refresh > /dev/null 2>&1";
+  msg = "SP Refresh"
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  if rc:
+    tlog.error("SP Refresh failed. Error %d.\n %s" % (rc, output));
+# ... end of SPRefresh
+
+def RemoveDisk(devicePath, ignoreError = False) :
+  cmd =  ConfigCmd + " disk remove " + devicePath;
+  msg = "Disk remove %s" % (devicePath);
+  SetCurrDiskPath(devicePath);
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  return rc, output;
+# ... end of RemoveDisk
+
+def InitDisk(devicePath, forceOption="") :
+  cmd =  ConfigCmdForInstance + " disk init " + forceOption + devicePath;
+  msg = "Disk init %s" % (devicePath);
+  errMsg = ""
+  SetCurrDiskPath(devicePath);
+  rc, output = RunCmd(cmd, msg, ignoreError=True);
+  if (rc):
+    logMsg = "%s failed." % (msg);
+    if (rc == errno.EEXIST):
+      if (forceOption == ""):
+        errMsg = "Disk is already initialized."
+      else:
+        errMsg = "Disk is already initialized and currently loaded."
+    elif (rc == errno.EBUSY):
+      errMsg = "Disk is used by some other module/process."
+    else:
+      logMsg += "Error %d, %s." % (rc, os.strerror(rc));
+    logMsg += msg;
+    tlog.info(logMsg);
+    AbortWithError(rc, errMsg, devicePath);
+# ... end of InitDisk
+
+def MRDisk(devicePath, msg="mrdisk") :
+  cmd =  MRDiskCmd + " -v " + devicePath;
+  global useSudo;
+  if useSudo:
+    cmd = "%s mrdisk -v %s" % (MapRExecute, devicePath);
+  SetCurrDiskPath(devicePath);
+  return RunCmd(cmd, msg);
+# ... end of MRDisk
+
+def LoadDisk(devicePath) :
+  cmd =  ConfigCmdForInstance + " disk load " + devicePath;
+  msg = "Disk load %s" % (devicePath);
+  SetCurrDiskPath(devicePath);
+  return RunCmd(cmd, msg);
+# ... end of LoadDisk
+
+def ListDisk(devicePath, ignoreError=False) :
+  cmd =  ConfigCmd + " disk list -v -n " + devicePath;
+  msg = "Disk list -v -n %s" % (devicePath);
+  SetCurrDiskPath(devicePath);
+  return RunCmd(cmd, msg, ignoreError);
+# ... end of ListDisk
+
+def CreateConcatDG(deviceList) :
+  deviceNames = " ";
+  for dev in deviceList :
+    deviceNames += dev + " ";
+
+  cmd =  ConfigCmd + " dg create concat " + deviceNames;
+  msg = "Creating Concat DG %s" % (deviceNames);
+  SetCurrDiskPath(deviceList[0]);
+  RunCmd(cmd, msg);
+# ... end of CreateConcatMDG
+
+def CreateRaid0DG(deviceList, stripeDepth=StripeDepth):
+  deviceNames = " ";
+  for dev in deviceList :
+    deviceNames += dev + " ";
+
+  cmd = ConfigCmd + " dg create raid0 -d %d %s" % (stripeDepth, deviceNames);
+  msg = "Creating RAID0 DG %s" % (deviceNames);
+  SetCurrDiskPath(deviceList[0]);
+  RunCmd(cmd, msg);
+# ... end of CreateRaid0DG
+
+def MakeSP(devicePath, cid=0, forceOption="", logSize=0):
+  cmd =  ConfigCmd + " sp make " + forceOption
+  if (cid):
+    cmd += " -I %d " % (cid);
+  if (logSize):
+    cmd += " -l %d " % (logSize);
+  cmd += " %s" % (devicePath);
+  msg = "SP make " + devicePath;
+  SetCurrDiskPath(devicePath);
+  RunCmd(cmd, msg);
+# ... end of MakeSP
+
+def LoadSP(devicePath):
+  cmd =  ConfigCmd + " sp online " + devicePath;
+  msg = "SP online " + devicePath;
+  SetCurrDiskPath(devicePath);
+  RunCmd(cmd, msg);
+# ... end of LoadSP
+
+def GetPrimaryDisk(deviceList, parentDG):
+  cmd =  ConfigCmd + " dg list " + deviceList[0];
+  msg ="DiskGroup list "
+  SetCurrDiskPath(deviceList[0]);
+  rc, output = RunCmd(cmd, msg);
+  for line in output.splitlines():
+    if (line.find("ListDG") == -1 or
+        line.find(parentDG + " DG") == -1):
+      continue;
+    primary = line.split()[-1];
+
+  if primary not in deviceList:
+    AbortWithError(errno.EBADE, "primary %s not in the device list" % (primary),
+                   deviceList[0]);
+
+  return primary;
+# ... end of GetPrimaryDisk
+
+class DiskInfo:
+  def __init__(self, paths):
+    self.guid = [];
+    self.pids = list() #pid of command[s] to Trim the disk/partition
+    self.size = 0;
+    self.numaid = -1
+    self.partitions = paths.split();
+    self.nparts = len(self.partitions);
+    if (self.nparts):
+      self.isLoaded = [ False ] * self.nparts;
+      self.path = self.partitions[0];
+      self.primary = self.path;
+
+  def __repr__(self):
+    return repr((self.guid, self.size, self.partitions, self.nparts,
+                 self.primary));
+
+  def NumberOfPartitions(self):
+    return self.nparts;
+
+  def SetGuid(self, guidStr):
+    self.guid.append(guidStr);
+
+  def UpdateDiskInfo(self, output, path):
+    size = 0;
+    guid = "";
+    tlog.info(output);
+    error = errno.EBADE
+    for line in output.splitlines():
+      words = (line.strip()).split();
+      lineLength = len(words);
+      if lineLength == 0:
+        continue;
+      if (lineLength >= 4 and words[0] == "ListDisks" and words[2] == "guid"):
+        guid = words[3];
+      elif (words[0] == "size"):
+        index = words[1].find("MB");
+        if (index == -1):
+          AbortWithError(error, "Error in parsing size of the disk", path);
+        sstr = words[1][0:index];
+        size = long(sstr);
+      elif (words[0] == "Numaid"):
+        numaid = words[1];
+
+    if (size == 0):
+       AbortWithError(error, "Failed to find the size of the disk ", path);
+    if (guid == ""):
+       AbortWithError(error, "Failed to find the guid of the disk ", path);
+
+    self.size += size;
+    self.guid.append(guid);
+  # ... end of UpdateDiskInfo
+
+  def TriggerTrimCmd(self, dev, forceOption=""):
+    #Starts the MrTrim process on the disk.
+    msg = "TriggerTrim"
+    pid = -1
+    if useSudo:
+        cmd = "%s mrtrim %s %s" % (MapRExecute, forceOption, dev);
+        msg += " with maprexecute"
+    else:
+        cmd = "%s %s %s" % (MrTrim, forceOption, dev);
+    pid = RunCmdNoWait(cmd, msg);
+    return pid
+
+
+  def TrimDisk(self, forceOption=""):
+    # For each partition trigger the trim command. Track the pids in self.pids.
+    i = 0;
+    for dev in self.partitions:
+      ChangePerm(dev, MapRGroup);
+      pid = self.TriggerTrimCmd(dev, forceOption);
+      self.pids.append(pid)
+
+  def WaitForTrimCompletion(self):
+      #wait for trim commands to complete
+      for pid in self.pids:
+          pid.wait()
+
+  def InitDevices(self, forceOption=""):
+    i = 0;
+    for dev in self.partitions:
+      ChangePerm(dev, MapRGroup);
+      InitDisk(dev, forceOption);
+      ChangePerm(dev, MapRGroup);
+      LoadDisk(dev);
+      self.isLoaded[i] = True;
+      rc, output = ListDisk(dev);
+      self.UpdateDiskInfo(output, dev);
+      i = i + 1;
+    if (self.nparts > 1):
+      CreateConcatDG(self.partitions);
+      self.primary = GetPrimaryDisk(self.partitions, "Concat");
+    else:
+      LogDiskInfoFile(self.primary);
+
+  def LoadDevices(self):
+    i = 0;
+    for dev in self.partitions:
+      ChangePerm(dev, MapRGroup);
+      LoadDisk(dev);
+      self.isLoaded[i] = True;
+      i = i + 1;
+  # ... end of LoadDevices
+
+  def UnloadDevices(self):
+    i = 0;
+    for dev in self.partitions:
+      if self.isLoaded[i]:
+        rc, output = RemoveDisk(dev, ignoreError=True);
+        if (rc == 0):
+          self.isLoaded[i] = False;
+      i = i + 1;
+
+  def GetMapRDiskInfo(self):
+    for dev in self.partitions:
+      rc, output = MRDisk(dev, "GetMapRDiskInfo");
+      self.UpdateDiskInfo(output, dev);
+
+# ... end of DiskInfoClass
+
+def LoadDiskTab():
+  if not os.path.exists(DiskTabFile):
+    tlog.info("No disktab file: " + DiskTabFile);
+    return;
+
+  ifh = open(DiskTabFile, "r");
+  global diskTabDisks;
+  global diskTabGuids;
+  for line in ifh:
+    line = line.strip();
+    if not line:
+      continue;
+    if line.startswith("#"):
+      continue;
+    words = (line.strip()).split();
+    disk = os.path.join(words[0]);
+    guid = words[1].strip();
+    diskTabDisks.append(disk);
+    diskTabGuids.append(guid);
+  ifh.close();
+# ... end of LoadDiskTab
+
+def LoadInputFile(devListFile):
+  tlog.info("Start parsing input file: " + devListFile);
+  if not os.path.exists(devListFile):
+    AbortWithError(errno.ENOENT, "Missing input file " + devListFile);
+
+  tlog.info(open(devListFile, "r").read());
+  ifile = open(devListFile, "r");
+  global gdevices;
+  for line in ifile:
+    line = line.strip();
+    if not line:
+      continue;
+    if line.startswith("#"):
+      continue;
+    disk = DiskInfo(line);
+    if (disk.NumberOfPartitions() == 0):
+      AbortWithError(errno.EINVAL, "Parsing Error line:" + line, disk);
+    gdisks.append(disk);
+
+  global diskTabDisks;
+  for disk in gdisks:
+    for dev in disk.partitions:
+      if dev not in gdevices:
+        gdevices.add(dev);
+      else:
+        AbortWithError(errno.EINVAL, "Duplicate entry ", dev);
+      if dev in diskTabDisks:
+        AbortWithError(errno.EEXIST, "Disk already added in disktab ", dev);
+
+
+  tlog.info("Loaded disks: ");
+  for disk in gdisks:
+    tlog.info(disk);
+  if len(gdisks):
+    SetCurrDiskPath(gdisks[0].path);
+# ... end of LoadInputFile
+
+def LoadProcPartitions():
+  # Get devices from /proc/partitions other than the ones in disktab
+  # sample lines of /proc/partitions:
+  # major minor  #blocks  name
+  # 8        0  488386584 sda
+
+  ProcPartsFile = "/proc/partitions"
+  if not os.path.exists(ProcPartsFile):
+    AbortWithError(errno.ENOENT, "Missing " + ProcPartsFile);
+
+  tlog.info("Contents of " + ProcPartsFile);
+  tlog.info("\n" + open(ProcPartsFile, "r").read());
+
+  tlog.info("Start parsing " + ProcPartsFile);
+  ifile = open(ProcPartsFile, "r");
+  for line in ifile:
+    line = line.strip();
+    if not line:
+      continue;
+    if line.startswith("major"):
+      continue;
+    words = (line.strip()).split();
+    devPath = os.path.join("/dev/" + words[3]);
+    if not os.path.exists(devPath):
+      continue;
+    if devPath in diskTabDisks:
+      continue;
+    procPartsDisks.append(devPath);
+# ... end of LoadProcPartitions
+
+def UnloadAllDisks():
+  global gdisks;
+  for disk in gdisks:
+    disk.UnloadDevices();
+# ... end of UnloadAllDisks
+
+def TrimSSDs(ssdList, forceOption):
+  if len(ssdList) < 1:
+      return;
+  if isTrimEnabled == False:
+    return;
+  for disk in ssdList:
+    disk.TrimDisk(forceOption)
+  for disk in ssdList:
+    disk.WaitForTrimCompletion()
+
+def InitAllDisk(forceOption):
+  global gdisks;
+
+  ssdList = list()
+  for disk in gdisks:
+    devName = os.path.basename(disk.path)
+    if (checkIfSSD(devName)):
+        ssdList.append(disk)
+
+  #Trim SSDs
+  if (len(ssdList) > 0) and (isTrimEnabled == True):
+    msg = "Starting Trim of SSD drives, it may take long time to complete.."
+    if not quiet:
+      print msg + "\n"
+    tlog.info(msg)
+    TrimSSDs(ssdList, forceOption)
+    msg = "Done trim of all devices."
+    if not quiet:
+      print msg + "\n"
+    tlog.info(msg);
+
+  #Init everything post trim
+  for disk in gdisks:
+    disk.InitDevices(forceOption);
+
+# ... end of InitAllDisk
+
+def LoadDiskList(deviceList):
+  for disk in deviceList:
+    disk.LoadDevices();
+# ... end of LoadDiskList
+
+def GetInfoForDisks(diskList):
+  global mrdiskOutput;
+
+  disksString = "";
+  for disk in diskList:
+    disksString += " " + disk;
+  rc, mrdiskOutput = MRDisk(disksString, "GetInfoForDisks");
+
+  disks = []
+  # parse output of mrdisk and generate DiskInfos
+  lines = mrdiskOutput.splitlines();
+  i = 0
+  while i < len(lines):
+    line = lines[i];
+    i = i + 1;
+    if not line.startswith("ListDisks "):
+      continue;
+    words = (line.strip()).split();
+    devPath = words[1];
+    diskGuid = words[3].strip();
+
+    disk = DiskInfo(devPath);
+    disk.SetGuid(diskGuid);
+    disks.append(disk);
+
+  return disks;
+# ... end of GetInfoForDisks
+
+def GetInfoOfAllDisks():
+  global gdisks;
+  for disk in gdisks:
+    disk.GetMapRDiskInfo();
+# ... end of GetInfoOfAllDisks
+
+def setSchedulerAllDisks():
+  if not changeScheduler:
+    return;
+  global gdisks;
+  for disk in gdisks:
+    setScheduler(disk.path);
+
+def SortDisks():
+  tlog.info("Sorting disks with size");
+  gdisks.sort(key=operator.attrgetter('size'), reverse=True);
+  gdisks.sort(key=operator.attrgetter('numaid'));
+# ... end of SortDisks
+
+def FormatSPOnDisks(diskList, cid=0, force=""):
+  deviceList = []
+  for disk in diskList:
+    deviceList.append(disk.primary);
+
+  if (len(diskList) == 1):
+    disk = diskList[0];
+    primary = disk.primary;
+    if (disk.nparts == 1):
+      concatList = [primary];
+      CreateConcatDG(concatList);
+  else:
+    CreateRaid0DG(deviceList);
+    primary = GetPrimaryDisk(deviceList, "Raid0");
+    concatList = [primary];
+    CreateConcatDG(concatList);
+
+  # Set the log-size to 512M if '-M' option used.
+  if (UseBigLog == 1):
+    MakeSP(primary, cid, force, BigLogSize);
+  else:
+    MakeSP(primary, cid, force);
+  return primary;
+# ... end of FormatSPOnDisks
+
+def GroupDisksAndCreateSPs(force):
+  global cid;
+  tlog.info("Grouping disks create Storagepools");
+  count = len(gdisks);
+  if (count < 1):
+    tlog.warn("No disks to create Storagepools");
+    return;
+
+  groups = [];
+  numDiskGroups = (count + StripeWidth - 1) / StripeWidth
+  disksPerGroup = count / numDiskGroups
+  extras = count % numDiskGroups
+
+  for disk in range(extras):
+    groups.append(disksPerGroup + 1)
+
+  for group in range(numDiskGroups - extras):
+      groups.append(disksPerGroup)
+
+  tlog.info("disk group sizes %s " % groups);
+
+  global spList;
+  index = 0;
+  for group in groups:
+    last = index + group;
+    diskList = gdisks[index:last]
+    ResetConfigCmdForInstance(diskList[0].numaid);
+    LoadDiskList(diskList);
+    primary = FormatSPOnDisks(diskList, cid, force);
+    spList.append(primary);
+    cid = 0;
+    index = last;
+# ... end of GroupDisksAndCreateSPs
+
+def PrintAllDisks():
+  tlog.info("Print Disks on stdout ");
+  for disk in gdisks:
+    for partition in disk.partitions:
+      msg = "%s added." % (partition);
+      print msg;
+      tlog.info(msg);
+# ... end of PrintAllDisks
+
+def GenerateDiskTab():
+  localtime = time.asctime(time.localtime(time.time()));
+  tlog.info("Generating disktab contents");
+  msg = "# MapR Disks %s \n\n" % (localtime);
+  for disk in gdisks:
+    i = 0;
+    for partition in disk.partitions:
+      line ="%s %s\n" % (partition, disk.guid[i]);
+      msg = msg +line;
+      i = i + 1;
+
+  tlog.info(msg);
+  return msg;
+# ... end of GenerateDiskTab
+
+def BackupUdevRules():
+  if (os.path.exists(UdevRuleFilePath)):
+    ifh = open(UdevRuleFilePath, "r");
+    ofh = open(BkupRulesFilePath, "w");
+    ofh.write(ifh.read());
+    ofh.close();
+    tlog.info("%s created. Contents:\n %s" % (BkupRulesFilePath, ifh.read()));
+    ifh.close();
+  else:
+    tlog.info("%s do not exist." % UdevRuleFilePath);
+# ... end of BackupUdevRules
+
+def RestoreUdevRules():
+  if not UdevModified:
+    tlog.info("Udev restoration not required.");
+    return;
+  tlog.info("Attempting Udev restoration from %s." % BkupRulesFilePath);
+
+  if (os.path.exists(BkupRulesFilePath)):
+    ifh = open(BkupRulesFilePath, "r");
+    UpdateUdevRules(ifh.read(), True);
+    ifh.close();
+    tlog.info("Original Udev restored from %s.", BkupRulesFilePath);
+    DeleteFile(BkupRulesFilePath);
+  else:
+    tlog.info("%s not found. Can not restore original udev file.");
+# ... end of RestoreUdevRules
+
+def UpdateDiskTabFile():
+  tlog.info("Updating disktab file");
+  global gdevices;
+
+  tlog.info("Updating disktab file");
+  TmpDiskTab = os.path.join(MapRHome, "conf/disktab.tmp.%d" % os.getpid());
+  msg = GenerateDiskTab();
+  global DiskTabLockFile;
+  lockfh = open(DiskTabLockFile, "w");
+  fcntl.flock(lockfh.fileno(), fcntl.LOCK_EX);
+  ofh = open(TmpDiskTab, "w");
+  if (os.path.exists(DiskTabFile)):
+    ofh.write(open(DiskTabFile, "r").read());
+  ofh.write(msg);
+  ofh.close();
+  os.rename(TmpDiskTab, DiskTabFile);
+  #grant rx to owner, r to group and other
+  os.chmod(DiskTabFile, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH);
+  lockfh.close();
+  DeleteFile(DiskTabLockFile);
+  DeleteFile(BkupRulesFilePath);
+# ... end of UpdateDiskTabFile
+
+def GenerateUdevRules(disks):
+  msg = ""
+  if (MapRGroup == "" or MapRGroup == "root"):
+    return msg;
+
+  for i in range(len(disks)):
+    path = os.path.normpath(disks[i]);
+    head, tail = os.path.split(path);
+    if (len(tail) == 0 or not head.startswith("/dev")):
+      tlog.info("skip path %s : %s,%s" % (path, head, tail));
+      continue;
+    diskName = tail;
+    line = "KERNEL==\"%s\", GROUP=\"%s\", MODE=\"0660\"\n" % (diskName, MapRGroup);
+    msg = msg + line;
+  return msg;
+# ... end of GenerateUdevRules
+
+def AddUdevRules(disks):
+  if (MapRGroup == "" or MapRGroup == "root" or
+      UdevRuleFilePath == ""):
+    return;
+
+  tlog.info("Fixing udev rules");
+  ruleMsg = GenerateUdevRules(disks);
+  if (os.path.exists(UdevRuleFilePath)):
+    ifh = open(UdevRuleFilePath);
+    output = ifh.read();
+    ifh.close();
+    ruleMsg = output + ruleMsg;
+    tlog.info("old udev rules:\n" + output);
+
+  BackupUdevRules();
+  UpdateUdevRules(ruleMsg, ignoreError=False);
+  UdevModified = UdevRunning;
+# ... end of AddUdevRules
+
+def FixUdevRules(disks):
+  if (MapRGroup == "" or MapRGroup == "root" or
+      UdevRuleFilePath == ""):
+    return;
+
+  tlog.info("Fixing udev rules");
+  ruleMsg = GenerateUdevRules(disks);
+  if (os.path.exists(UdevRuleFilePath)):
+    ifh = open(UdevRuleFilePath);
+    output = ifh.read();
+    ifh.close();
+    if (output == ruleMsg):
+      return;
+    tlog.info("old udev rules:\n" + output);
+
+  UpdateUdevRules(ruleMsg, ignoreError=True);
+# ... end of FixUdevRules
+
+def DeleteFile(filename):
+  if (os.path.exists(filename)):
+    os.remove(filename);
+  else:
+    tlog.info("%s file not found." % filename);
+# ... end of DeleteFile
+
+def CheckUdevStatus(ignoreError=True):
+  global UdevRunning;
+  msg = "CheckUdevStatus"
+  cmd = "service udev status"
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  if (rc):
+    tlog.error("Failed to check udev status %d" % rc);
+    UdevRunning = False;
+    return;
+  if "start/running" in output:
+    UdevRunning = True;
+  else:
+    UdevRunning = False;
+# ... end of CheckUdevStatus
+
+def UpdateUdevRules(ruleMsg, ignoreError=True):
+  tlog.info("Update udev rules\n" + ruleMsg);
+  tmpRulesFilePath = "/tmp/99-mapr-disk.rules.%d" % os.getpid();
+  ofh = open(tmpRulesFilePath, "w");
+  ofh.write(ruleMsg);
+  ofh.close();
+  CheckUdevStatus();
+  msg = "UpdateUdevRules"
+  if useSudo:
+    if not UdevRunning:
+      return;
+    cmd = "%s updateudev %s" % (MapRExecute, tmpRulesFilePath);
+    msg += " with maprexecute"
+    rc, output = RunCmd(cmd, msg, ignoreError);
+    if (rc):
+      tlog.error("Failed to create udev rules %d" % rc);
+    DeleteFile(tmpRulesFilePath);
+    return;
+
+  cmd = "/bin/mv %s %s" % (tmpRulesFilePath, UdevRuleFilePath);
+  rc, output = RunCmd(cmd, msg, ignoreError);
+  if (rc):
+    tlog.error("Failed to create udev rules %d" % rc);
+    return;
+
+  if not UdevRunning:
+    return;
+
+  udevCmd, udevControl = GetUdevCmds();
+
+  if (udevCmd != ""):
+    cmd = udevCmd + " control --reload-rules" ;
+  elif (udevControl != ""):
+    cmd = udevControl + " reload_rules";
+  else:
+    tlog.error("No udevCmd: %s or udevControl: %s ", udevCmd, udevControl);
+    return;
+  RunCmd(cmd, msg, ignoreError);
+# ... end of UpdateUdevRules
+
+def GetUdevCmds():
+  cmd = "/sbin/udevadm";
+  if (os.path.exists(cmd)):
+    return cmd, "";
+
+  udevControl = "/sbin/udevcontrol";
+  if (os.path.exists(udevControl)):
+    return "", udevControl;
+
+  rc, cmd = RunCmd("which udevcmd", "which", ignoreError=True);
+  if (rc == 0):
+    return cmd, "";
+
+  rc, udevControl = RunCmd("which udevcontrol", "which", ignoreError=True);
+  if (rc == 0):
+    return "", udevControl;
+
+  tlog.error("No cmd: %s or udevControl: %s ", cmd, udevControl);
+  return "", "";
+# ... end of GetUdevCmds
+
+def GenerateNewDiskTabContents(disks, guids):
+  localtime = time.asctime(time.localtime(time.time()));
+  tlog.info("Generating new disktab contents");
+  msg = "# MapR Disks %s \n\n" % (localtime);
+  for i in range(len(guids)):
+    line ="%s %s\n" % (disks[i], guids[i]);
+    msg = msg +line;
+
+  tlog.info(msg);
+  return msg;
+# ... end of GenerateNewDiskTabContents
+
+def ChangeGroupForDisks(disks, ignoreError=False):
+  for disk in disks:
+    ChangePerm(disk, MapRGroup, ignoreError);
+# ... ChangeGroupForDisks
+
+def CreateNewDiskTabFile(disks, guids):
+  tlog.info("Creating new disktab file");
+  TmpDiskTab = os.path.join(MapRHome, "conf/disktab.tmp.%d" % os.getpid());
+  msg = GenerateNewDiskTabContents(disks, guids);
+  ofh = open(TmpDiskTab, "w");
+  ofh.write(msg);
+  ofh.close();
+  global DiskTabLockFile;
+  lockfh = open(DiskTabLockFile, "w");
+  fcntl.flock(lockfh.fileno(), fcntl.LOCK_EX);
+  os.rename(TmpDiskTab, DiskTabFile);
+  lockfh.close();
+  DeleteFile(DiskTabLockFile);
+# ... end of CreateNewDiskTabFile
+
+def FindDiskPath(guid, diskInfos):
+  for di in diskInfos:
+    for i in range(len(di.guid)):
+      if (di.guid[i] == guid):
+        return di.partitions[i];
+  return "";
+# ... end of FindDiskPath
+
+# This function will be called at the time of mfs init from the
+# mfs init scripts. It will scan the disktab file and compare its data
+# with the actual ondisk data and try to repair disktab if some data
+# is not matching. Basically it matches the path:guid pair that is
+# stored ondisk vs each entry of disktab file
+# Also, if the disk is SSD, we set the IO scheduler to NOOP unless
+# the -S option in which case we skip this step.
+
+def FixDiskTab():
+  newDiskTabDisks = [];
+  missingPrefix = "/MissingDisk";
+  missingGuid = 0;
+  needFixing = 0;
+
+  LoadDiskTab();
+  rulesMsg = GenerateUdevRules(diskTabDisks);
+  diskTabInfoList = GetInfoForDisks(diskTabDisks);
+  for i in range(len(diskTabGuids)):
+    guid = diskTabGuids[i];
+    diskPath = FindDiskPath(guid, diskTabInfoList);
+    newDiskTabDisks.append(diskPath);
+    if (diskPath == ""):
+      missingGuid = missingGuid + 1;
+    if (newDiskTabDisks[i] != diskTabDisks[i]):
+      needFixing = needFixing + 1;
+
+  if needFixing:
+    tlog.info("diskTabInfoList: ");
+    tlog.info(diskTabInfoList);
+    tlog.info("mrdisk on diskTabDisks \n%s" % (mrdiskOutput));
+    SaveDiskTab("Fix disktab");
+
+  if missingGuid:
+    tlog.info("Find missingGuids %d in /proc/partitions", missingGuid);
+    LoadProcPartitions();
+    procDiskInfoList = GetInfoForDisks(procPartsDisks);
+    tlog.info("procDiskInfoList: ");
+    tlog.info(procDiskInfoList);
+    tlog.info("mrdisk on /proc/partitions \n%s" % (mrdiskOutput));
+
+    for i in range(len(diskTabGuids)):
+      if (newDiskTabDisks[i] != ""):
+        continue;
+      guid = diskTabGuids[i];
+      diskPath = FindDiskPath(guid, procDiskInfoList);
+      newDiskTabDisks[i] = diskPath
+      if (diskPath == ""):
+        # guid is not found in any of /proc/partitions
+        tlog.info("missing disk: %s %s" % (diskTabDisks[i], diskTabGuids[i]));
+        if diskTabDisks[i] in newDiskTabDisks:
+          newDiskTabDisks[i] = "%s%d" % (missingPrefix, i);
+          if not diskTabDisks[i].startswith(missingPrefix):
+            tlog.info("Placeholder %s Guid %s old diskPath" %
+                      (newDiskTabDisks[i], diskTabGuids[i]), diskTabDisks[i]);
+        else:
+          newDiskTabDisks[i] = diskTabDisks[i];
+        continue;
+      missingGuid = missingGuid - 1;
+      if missingGuid == 0:
+        break;
+
+  FixUdevRules(newDiskTabDisks);
+  if needFixing:
+    tlog.info("Fixing disktab, needFixing %d missingGuid %d" %
+              (needFixing, missingGuid));
+    ChangeGroupForDisks(newDiskTabDisks, True);
+    CreateNewDiskTabFile(newDiskTabDisks, diskTabGuids);
+    # Backup last known good configuration
+    if not missingGuid:
+      BackupDiskTab();
+  else:
+    tlog.info("Disktab is good to use. Nothing to fix");
+    ChangeGroupForDisks(diskTabDisks);
+
+  if changeScheduler:
+    for i in range(len(newDiskTabDisks)):
+      diskPath = newDiskTabDisks[i];
+      setScheduler(diskPath);
+# ... end of FixDiskTab
+
+def LogCurrentInfo(argMsg):
+  msg = " Trying to capture debug info, following errors can be ignored \n";
+  tlog.info(argMsg + msg);
+
+  cmd =  ConfigCmd + " disk list ";
+  msg = "Disk list ";
+  rc, output = RunCmd(cmd, msg, ignoreError=True);
+  tlog.info(output);
+
+  cmd =  ConfigCmd + " dg list ";
+  msg = "DiskGroup list ";
+  rc, output = RunCmd(cmd, msg, ignoreError=True);
+  tlog.info(output);
+
+  cmd =  ConfigCmd + " sp list ";
+  msg = "sp list ";
+  rc, output = RunCmd(cmd, msg, ignoreError=True);
+  tlog.info(output);
+
+  tlog.info("\nDone capturing debug info\n\n");
+  SaveDiskTab(argMsg);
+# ... end of LogCurrentInfo
+
+def SaveDiskTab(argMsg):
+  if (os.path.exists(DiskTabFile)):
+    tlog.info(argMsg + " Saving current disktab file\n");
+    tlog.info("\n" + open(DiskTabFile, "r").read());
+    tlog.info(argMsg + " End of current disktab file");
+# ... end of SaveDiskTab
+
+def BackupDiskTab():
+  if (os.path.exists(DiskTabFile)):
+    tlog.info(" Backup current disktab file");
+    ofh = open(DiskTabBackupFile, "w");
+    ofh.write(open(DiskTabFile, "r").read());
+    ofh.close();
+# ... end of BackupDiskTab
+
+def SetCldbRole():
+  global cid;
+  if (os.path.exists(CLDBRolePath)):
+    tlog.info("Create cid = 1 for cldb role");
+    cid = 1;
+# ... end of SetCldbRole
+
+def GetMfsUp():
+  tlog.info("Lookup for : " + ClusterConfFile);
+  if not os.path.exists(ClusterConfFile):
+    msg = "%s is missing. Run configure.sh to create it." % (ClusterConfFile);
+    AbortWithError(errno.ENOENT, msg);
+
+  global myMfsStarted;
+  cmd = MfsPath + " status";
+  rc, out = RunCmd(cmd, "mapr-mfs status", ignoreError=True);
+  if (rc) :
+    help = MfsFailHelp;
+    myMfsStarted = True;
+    cmd = MfsPath + " start";
+    RunCmd(cmd, "Fileserver start");
+
+  # Wait until mfs process is up
+  wsec = 0;
+  while (1):
+    rc, out = ListDisk("", ignoreError=True);
+    if (rc == 0):
+      break;
+    tlog.info("\n%d. WaitForMfs disk list error %d" % (wsec, rc >> 8));
+    tlog.info(out);
+    time.sleep(2);
+    wsec = wsec + 1;
+    if (wsec > 10):
+      msg = "Unable to reach mfs. Check for errors in mfs.log."
+      AbortWithError(errno.ESRCH, msg);
+# ... end of GetMfsUp
+
+def StopMyMfs():
+  global myMfsStarted;
+  if (myMfsStarted):
+    help = "";
+    cmd = MfsPath + " stop";
+    RunCmd(cmd, "Fileserver stop", ignoreError=True);
+# ... end of StopMyMfs
+
+def LoadAllSPs():
+  global myMfsStarted;
+  global spList;
+  if (myMfsStarted):
+    return;
+  for devPath in spList:
+    LoadSP(devPath);
+# ... end of LoadAllSPs
+
+def LogDiskInfoFile(diskPath):
+  SetCurrDiskPath(diskPath);
+  disk = os.path.basename(diskPath);
+  vendor = "unknown_vendor"
+  model = "unknown_model"
+  serial = "unknown_serial"
+  firmwareRevision = "unknown_firmware"
+  totalSize = "unknown_total"
+
+  vpath=os.path.join("/sys/block/" + disk + "/device/vendor");
+  if os.path.exists(vpath):
+    ostr = open(vpath, "r").read().strip();
+    if len(ostr):
+      vendor = ostr;
+
+  mpath=os.path.join("/sys/block/" + disk + "/device/model");
+  if os.path.exists(mpath):
+    ostr = open(mpath, "r").read().strip();
+    if len(ostr):
+      model = ostr;
+
+  rpath=os.path.join("/sys/block/" + disk + "/device/rev");
+  if os.path.exists(rpath):
+    ostr = open(rpath, "r").read().strip();
+    if len(ostr):
+      firmwareRevision = ostr;
+
+  spath=os.path.join("/sys/block/" + disk + "/size");
+  if os.path.exists(spath):
+    ostr = open(spath, "r").read().strip();
+    if len(ostr):
+      totalSize = ostr;
+
+  UDisksProg = "/usr/bin/udisks";
+  if not os.path.exists(UDisksProg):
+    UDisksProg = "/usr/bin/devkit-disks";
+    if not os.path.exists(UDisksProg):
+      UDisksProg = "";
+
+  if (UDisksProg != ""):
+    tlog.info("udisks " + UDisksProg);
+    cmd = UDisksProg + " --show-info /dev/" + disk ;
+    rc, output = RunCmd(cmd, "udisks show-info", ignoreError=True);
+    if (rc == 0):
+      for line in output.splitlines():
+        words = (line.strip()).split();
+        if (words[0] == "serial:" and len(words) == 2):
+          serial = words[1];
+
+  info = "\nDisk                :    " + disk + \
+         "\nVendor              :    " + vendor + \
+         "\nModel Number        :    " + model + \
+         "\nSerial Number       :    " + serial + \
+         "\nFirmware Revision   :    " + firmwareRevision + \
+         "\nSize                :    " + totalSize + "\n";
+
+  tlog.info(info);
+  diskInfoFileName = os.path.basename(diskPath);
+  path = os.path.normpath(diskPath);
+  if (path.startswith("/dev/")):
+    path = path[5:];
+  diskInfoFileName = path.replace("/", "_");
+  infoPath = os.path.join(ServerData, diskInfoFileName + ".info");
+  tlog.info("Log to " + infoPath);
+  ofh = open(infoPath, "w");
+  ofh.write(info);
+  ofh.close();
+  ChangeOwner(infoPath, MapRUser);
+  tlog.info("disk info logged in " + infoPath);
+
+  # Remove this disk from failed disks
+  failInfoPath = os.path.join(ServerData, disk + ".failed.info");
+
+# ... end of LogDisk
+
+def ExitIfNotRoot():
+  if not os.geteuid() == 0:
+    AbortWithError(errno.EPERM, "Not running as root");
+# ... end of ExitIfNotRoot
+
+def RunDiskSetup():
+  global gdevices;
+
+  signal.signal(signal.SIGINT, InterruptSignalHandler);
+  SetCldbRole();
+  LoadDiskTab();
+  LoadInputFile(diskListFile);
+  GetMfsUp();
+  LogCurrentInfo("start setup");
+  ###AddUdevRules(list(gdevices));
+  InitAllDisk(force);
+  SortDisks();
+  setSchedulerAllDisks();
+  UnloadAllDisks();
+  GroupDisksAndCreateSPs(force);
+  LogCurrentInfo("end setup");
+  StopMyMfs();
+  UpdateDiskTabFile();
+  LoadAllSPs();
+  SPRefresh();
+  PrintAllDisks();
+# ... end of RunDiskSetup
+
+def Help(exitCode=1):
+  print "disksetup [-FGMW:X] <disklist_input_file>"
+  #print " -C \t\t create cid=1 on one of the SP"
+  print " -F \t\t force to reformat the disks"
+  print " -G \t\t no format, just generate disktab contents from input disklist"
+  print " -X \t\t no format, fix the disktab contents from /proc/partitions"
+  print " -M \t\t to use max stripe width for raid disk groups"
+  print " -W <stripe_width> to change the stripe width for raid disk groups"
+  sys.exit(exitCode);
+# ... end of Help
+
+class SingleInstance:
+   def __init__(self):
+     self.lockfile = os.path.normpath("/tmp/" + os.path.basename(__file__) +
+                                      ".lock");
+     self.fp = open(self.lockfile, 'w');
+     try:
+       fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+     except IOError:
+       print "Another instance of disksetup is running"
+       self.lockfile = "";
+       sys.exit(-1);
+   def __del__(self):
+     import os;
+     self.fp.close();
+     if os.path.exists(self.lockfile):
+       os.unlink(self.lockfile);
+# ... end of class
+
+if not os.geteuid() == 0:
+  useSudo = True;
+
+#ExitIfNotRoot();
+# To make the script single instance
+oneInst = SingleInstance();
+InitMapRPaths();
+
+try:
+  optlist, args = getopt.getopt(sys.argv[1:], 'CFGMXShqp:W:');
+except getopt.GetoptError, err:
+  print str(err);
+  print "Error in parsing options.";
+  Help();
+
+
+infoMsg = "Options:\n"
+for o, a in optlist:
+  if o == "-C":
+    cid = 1;
+    infoMsg += "Using -C to create cid=1 on one of the SP\n";
+  elif o == "-F":
+    force = " -F ";
+    infoMsg += "Using -F force option\n";
+  elif o == "-G":
+    generateDiskTabOnly = True;
+    infoMsg += "Using -G generate disktab option\n";
+  elif o == "-X":
+    fixDiskTabOnly = True;
+  elif o == "-W":
+    w = long(a);
+    if (w <= 0 or w > MaxStripeWidth):
+      print "Invalid stripe width %d" % (w);
+      sys.exit(1);
+    StripeWidth = w;
+    infoMsg += "Using stripe width %d\n" % (w);
+  elif o == "-M":
+    UseBigLog = 1;
+    StripeWidth = MaxStripeWidth;
+    infoMsg += "Using max stripe width %d\n" % (MaxStripeWidth);
+  elif o == "-p":
+    Port = long(a);
+    infoMsg += "Using port %d\n" % (Port);
+    InitConfigCmd();
+  elif o == "-q":
+    quiet = True;
+    infoMsg += "Using -q quiet option\n";
+  elif o == "-S":
+    changeScheduler = False;
+  else:
+    Help();
+# ... end of for
+
+# rest of the commands need an argument
+if (len(args) != 1 and not fixDiskTabOnly):
+  print "Expected one argument, found %d" % (len(args));
+  Help();
+
+InitLogging();
+sys.excepthook = LogExceptionHook
+GetMapRUserAndGroup();
+GetTrimStatusFromMFSConf();
+if (fixDiskTabOnly):
+  FixDiskTab();
+  sys.exit(0);
+
+tlog.info("argv: %s" % sys.argv);
+tlog.info(infoMsg);
+
+diskListFile = args[0];
+
+if (generateDiskTabOnly):
+  SaveDiskTab("generate disktab");
+  LoadInputFile(diskListFile);
+  GetInfoOfAllDisks();
+  SortDisks();
+  print GenerateDiskTab();
+  sys.exit(0);
+
+RunDiskSetup();

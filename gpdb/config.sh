@@ -19,6 +19,8 @@ export DOCKER_LABEL="GPDB 5"
 export DOCKER_TAG="kochanpivotal/gpdb5"
 export DOCKER_LATEST_TAG="kochanpivotal/gpdb5:latest"
 
+export DOCKER_SUSE_LATEST_TAG="kochanpivotal/gpdb5suse:latest"
+
 # CHANGEME to build different GPDB version
 export GPDB_VERSION="5.7.0-rhel6-x86_64"
 #export GPDB_VERSION="4.3.19.0-rhel5-x86_64"
@@ -30,7 +32,7 @@ export GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.7.0"
 
 export DOCKER_PXF_LABEL="GPDB 5-PXF"
 export DOCKER_PXF_TAG="kochanpivotal/gpdb5-pxf"
-
+export DOCKER_PXF_LATEST_TAG="kochanpivotal/gpdb5-pxf:latest"
 # Alluxio
 export DOCKER_ALLUXIO_LABEL="GPDB 5-alluxio"
 export DOCKER_ALLUXIO_TAG="kochanpivotal/gpdb5-alluxio"

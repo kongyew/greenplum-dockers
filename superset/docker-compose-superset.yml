@@ -1,0 +1,49 @@
+version: '2'
+services:
+  superset:
+    image: amancevice/superset
+    hostname: "superset"
+    container_name: superset
+    ports:
+      - "8088:8088"
+    volumes:
+       - .:/code
+    tty: true
+    privileged: true
+    links:
+         - gpdb5:gpdbsne
+    networks:
+      mynetwork:
+        aliases:
+          - superset
+          - superset.localdomain.com
+  gpdb5:
+        #build:
+        #  context: .
+        #  dockerfile: ./gpdb/Dockerfile
+        image: "kochanpivotal/gpdb5-pxf"
+        command: bin/bash
+        hostname: "gpdbsne"
+        container_name: gpdbsne
+        ports:
+         - "5432:5432"
+         - "5005:5005"
+         - "5010:5010"
+         - "9022:22"
+         - "40000:40000"
+         - "40001:40001"
+         - "40002:40002"
+        expose:
+         - "5432"
+        volumes:
+         - .:/code
+
+        tty: true
+        networks:
+          mynetwork:
+            aliases:
+              - gpdbsne
+              - gpdbsne.localdomain.com
+networks:
+    mynetwork:
+      driver: bridge

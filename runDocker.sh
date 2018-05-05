@@ -2,9 +2,72 @@
 set -e
 [[ ${DEBUG} == true ]] && set -x
 
-set -x
+#set -x
 # Including configurations
 . config.sh
+
+
+
+
+################################################################################
+function RunAirFlow()
+{
+  echo "[RunAirFlow] Command:  $1"
+  COMMAND=$1
+
+  if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    exit -1;
+  else
+    if [[ "${COMMAND}" == "up" ]]; then
+        $DC_AIRFLOW_SCRIPT up
+    elif [[ "${COMMAND}" == "down" ]]; then
+         $DC_AIRFLOW_SCRIPT down
+    else # default option
+        $DC_AIRFLOW_SCRIPT up
+    fi
+  fi
+}
+
+################################################################################
+function RunSpark2_2()
+{
+  echo "[RunSpark2_2] Command:  $1"
+  COMMAND=$1
+
+  if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    exit -1;
+  else
+    if [[ "${COMMAND}" == "up" ]]; then
+        $DC_SPARK2_2_SCRIPT up
+    elif [[ "${COMMAND}" == "down" ]]; then
+         $DC_SPARK2_2_SCRIPT down
+    else # default option
+        $DC_SPARK2_2_SCRIPT up
+    fi
+  fi
+}
+################################################################################
+function RunSpark2_1()
+{
+  echo "[RunSpark2_1] Command:  $1"
+  COMMAND=$1
+
+  if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    exit -1;
+  else
+    if [[ "${COMMAND}" == "up" ]]; then
+        $DC_SPARK2_1_SCRIPT up
+    elif [[ "${COMMAND}" == "down" ]]; then
+         $DC_SPARK2_1_SCRIPT down
+    else # default option
+        $DC_SPARK2_1_SCRIPT up
+    fi
+  fi
+}
+
 ################################################################################
 function RunMapR()
 {
@@ -43,6 +106,28 @@ function RunCloudera()
     fi
   fi
 }
+################################################################################
+function RunHortonworks()
+{
+  echo "[RunHortonworks] Command:  $1"
+  COMMAND=$1
+
+  if [[ -z "${COMMAND}" ]]; then
+    echo "Missing command"
+    exit -1;
+  else
+    if [[ "${COMMAND}" == "up" ]]; then
+        $DC_HORTONWORKS_SCRIPT up
+    elif [[ "${COMMAND}" == "down" ]]; then
+         $DC_HORTONWORKS_SCRIPT down
+    else # default option
+        $DC_HORTONWORKS_SCRIPT up
+    fi
+  fi
+}
+
+
+
 ################################################################################
 function RunPostgres8_3()
 {
@@ -144,23 +229,31 @@ export DOCKER_COMPOSE_SCRIPT="docker-compose -f ./docker-compose-gpdb.yml"
 
 if [[ -z "${TYPE}" ]]; then
   echo "Invalid Type"
+  printHelp
 else
   if [[ "${TYPE}" == "cloudera" ]]; then
       RunCloudera "${COMMAND}"
   elif [[ "${TYPE}" == "mapr" ]]; then
       RunMapR  "${COMMAND}"
   elif [[ "${TYPE}" == "hortonworks" ]]; then
-     echo "test"
+     RunHortonworks "${COMMAND}"
   elif [[ "${TYPE}" == "minio" ]]; then
       RunMinio  "${COMMAND}"
   elif [[ "${TYPE}" == "postgres9.6" ]]; then
         RunPostgres9_6  "${COMMAND}"
   elif [[ "${TYPE}" == "postgres8.3" ]]; then
         RunPostgres9_6  "${COMMAND}"
+  elif [[ "${TYPE}" == "spark2.1" ]]; then
+        RunSpark2_1  "${COMMAND}"
+  elif [[ "${TYPE}" == "spark2.2" ]]; then
+        RunSpark2_2  "${COMMAND}"
+  elif [[ "${TYPE}" == "airflow" ]]; then
+        RunAirFlow  "${COMMAND}"
   else # default option
        echo "test"
   fi
 fi
+
 
 
 

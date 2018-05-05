@@ -18,7 +18,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . "${DIR}"/util.sh
 
 ###############################################################################
-function InstallJDK()
+function InstallJDK_ALLSEGMENTS()
 {
   echo "Install Java on each Greenplum Database segment host"
   # Fix this issue "Rpmdb checksum is invalid: dCDPT(pkg checksums)"
@@ -39,7 +39,32 @@ function InstallJDK()
   echo "Add Java home to gpadmin bashrc"
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "echo 'export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' >> /home/gpadmin/.bash_profile"
 
+  #yum clean all \
+  #&& rm -rf /var/cache/yum
+}
+###############################################################################
+function InstallJDK()
+{
+  echo "Install Java on this host"
+  # Fix this issue "Rpmdb checksum is invalid: dCDPT(pkg checksums)"
+  rpm --rebuilddb
+  #;  yum clean all
+  yum -y install wget
+  yum -y install java-1.8.0-openjdk
+  yum clean all
+  # sudo yum install java-1.8.0-openjdk
+  # sudo yum install java-1.7.0-openjdk
+  # sudo yum install java-1.6.0-openjdk
 
+  echo "Update the gpadmin user’s .bash_profile file on each segment host to include this $JAVA_HOME setting"
+  export JRE_HOME=$(pwd /usr/lib/jvm/java-1.8.0-openjdk-*/jre_)
+
+  echo "JRE_HOME : ${JRE_HOME}"
+  echo "Add Java home to gpadmin bashrc"
+  echo 'export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' >> /home/gpadmin/.bash_profile
+
+  #yum clean all \
+  #&& rm -rf /var/cache/yum
 }
 ###############################################################################
 function InstallCDH_RPM()
@@ -93,7 +118,9 @@ function InstallCDH_TAR()
 
 # Main
 startSSH
-InstallJDK
+InstallJDK_ALLSEGMENTS
+
+#InstallJDK
 InstallCDH_RPM
 
 #InstallCDH_TAR

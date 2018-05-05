@@ -3,7 +3,7 @@
 #
 #FROM centos:6.9
 #FROM centos:7.4.1708
-FROM centos/systemd
+FROM centos/systemd:latest
 
 
 # Argument
@@ -18,7 +18,6 @@ ENV ENV_GPDB_VERSION=$GPDB_VERSION
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
-
 #COPY ${GPDB_DOWNLOAD}/madlib-*.tar.gz /tmp/
 #COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
 
@@ -36,42 +35,24 @@ COPY gphdfs    /opt/gphdfs/
 ################################################################################
 RUN echo root:pivotal | chpasswd \
     && yum install -y vim wget unzip which tar more util-linux-ng passwd \
-    && yum install -y openssh-clients openssh-server ed m4 sudo \
-    && yum install -y  krb5-libs krb5-workstation \
-    && yum install -y cronie cronie-anacron \
-    && yum install -y iproute net-tools less \
-    && yum clean all
-
-
-RUN unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
+    && yum install -y openssh-clients openssh-server ed m4 sudo krb5-libs krb5-workstation \
+    && yum install -y cronie cronie-anacron iproute net-tools less \
+    && unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
     && rm /tmp/greenplum-db-${GPDB_VERSION}.zip \
     && sed -i s/"more << EOF"/"cat << EOF"/g /tmp/greenplum-db-${GPDB_VERSION}.bin \
     && echo -e "yes\n\nyes\nyes\n" | /tmp/greenplum-db-${GPDB_VERSION}.bin \
     && ln -s /usr/local/greenplum-db /usr/local/greenplum-db-devel \
     && cat /opt/configs/sysctl.conf.add >> /etc/sysctl.conf \
-    && cat /opt/configs/limits.conf.add >> /etc/security/limits.conf
-
-################################################################################
-#
-################################################################################
-#RUN mkdir -p /tmp/gpdb && tar -zxvf /tmp/greenplum-db-${GPDB_VERSION}.tar.gz -C /tmp/gpdb \
-#    && rm /tmp/greenplum-db-${GPDB_VERSION}.tar.gz \
-#    && mv /tmp/gpdb/ /usr/local/greenplum-db/ \
-#    && ln -s /usr/local/greenplum-db /usr/local/greenplum-db-devel \
-#    && cat /opt/configs/sysctl.conf.add >> /etc/sysctl.conf \
-#    && cat /opt/configs/limits.conf.add >> /etc/security/limits.conf
-
-RUN     cp /opt/configs/*.sh /usr/local/bin/ \
+    && cat /opt/configs/limits.conf.add >> /etc/security/limits.conf \
+    && cp /opt/configs/*.sh /usr/local/bin/ \
         && chmod +x /usr/local/bin/*.sh \
         && chmod +x /opt/PXF/*.sh \
         && cp /opt/PXF/*.sh /usr/local/bin \
         && chmod +x /opt/madlib/*.sh \
         && cp /opt/madlib/*.sh /usr/local/bin \
         && chmod +x /opt/pl_java/*.sh \
-        && cp /opt/pl_java/*.sh /usr/local/bin
-
-###############################################################################
-RUN     /usr/sbin/groupadd gpadmin \
+        && cp /opt/pl_java/*.sh /usr/local/bin \
+        && /usr/sbin/groupadd gpadmin \
         && /usr/sbin/useradd gpadmin -g gpadmin -G wheel \
         && echo "pivotal"|passwd --stdin gpadmin \
         && echo "gpadmin        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers \
@@ -81,14 +62,9 @@ RUN     /usr/sbin/groupadd gpadmin \
         && mkdir -p /gpdata/master /gpdata/segments \
         && chown -R gpadmin: /gpdata \
         && chown -R gpadmin: /usr/local/green* \
-        && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
-
-
-
-##############################################################################
-#       root user
-RUN   ssh-keygen -f /root/.ssh/id_rsa -N '' && \
-      cat /root/.ssh/id_rsa.pub > /root/.ssh/authorized_keys \
+        && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel \
+      && ssh-keygen -f /root/.ssh/id_rsa -N '' \
+      && cat /root/.ssh/id_rsa.pub > /root/.ssh/authorized_keys \
       && mkdir -p /home/gpadmin/.ssh  \
       && cat /root/.ssh/id_rsa.pub >> /home/gpadmin/.ssh/authorized_keys \
       && cp /root/.ssh/id_rsa /root/.ssh/id_rsa.pub /home/gpadmin/.ssh/  \
@@ -101,37 +77,28 @@ RUN   ssh-keygen -f /root/.ssh/id_rsa -N '' && \
       && echo "127.0.0.1 gpdbsne gpdbsne.localdomain" >> /etc/hosts \
       && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
       && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
-      && rm -f /tmp/greenplum-db-${GPDB_VERSION}.bin
-
-
-
+      && rm -f /tmp/greenplum-db-${GPDB_VERSION}.bin \
+      && yum clean all \
+      && rm -rf /var/cache/yum
 ################################################################################
-
 EXPOSE 5432 22
 EXPOSE 40000 40001 40002
 
 VOLUME /data
 # Set the default command to run when starting the container
 RUN   systemctl enable sshd.service
-# ENTRYPOINT ["/bin/bash"]
-
-
-
 ################################################################################
 # Default entry point
 # Files under /docker-entrypoint.d/ will be executed
 ################################################################################
-
 COPY configs/docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh
-
 COPY docker-entrypoint.d/* /docker-entrypoint.d/
-RUN chmod +x /docker-entrypoint.d/*.sh
+RUN chmod +x /docker-entrypoint.sh \
+&& chmod +x /docker-entrypoint.d/*.sh
 
 ONBUILD COPY /docker-entrypoint.d/* /docker-entrypoint.d/
 # Run all the scripts
 ENTRYPOINT ["/docker-entrypoint.sh"]
-
 
 # Default command
 CMD ["bin/bash"]

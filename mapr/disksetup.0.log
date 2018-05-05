@@ -1,0 +1,70 @@
+2018-03-02 19:41:03,101 24889 InitLogging:141 INFO 
+
+***** Starting disksetup: PID 24889 *****
+
+2018-03-02 19:41:03,102 24889 <module>:1470 INFO argv: ['/opt/mapr/server/disksetup', '-F', '/opt/mapr/disks/disklistsda.txt']
+2018-03-02 19:41:03,102 24889 <module>:1471 INFO Options:
+Using -F force option
+
+2018-03-02 19:41:03,102 24889 SetCldbRole:1221 INFO Create cid = 1 for cldb role
+2018-03-02 19:41:03,102 24889 LoadDiskTab:607 INFO No disktab file: /opt/mapr/conf/disktab
+2018-03-02 19:41:03,102 24889 LoadInputFile:628 INFO Start parsing input file: /opt/mapr/disks/disklistsda.txt
+2018-03-02 19:41:03,105 24889 LoadInputFile:632 INFO /opt/mapr/disks/storagefilea
+
+2018-03-02 19:41:03,106 24889 LoadInputFile:657 INFO Loaded disks: 
+2018-03-02 19:41:03,106 24889 LoadInputFile:659 INFO ([], 0, ['/opt/mapr/disks/storagefilea'], 1, '/opt/mapr/disks/storagefilea')
+2018-03-02 19:41:03,106 24889 GetMfsUp:1226 INFO Lookup for : /opt/mapr/conf/mapr-clusters.conf
+2018-03-02 19:41:03,106 24889 RunCmd:268 INFO mapr-mfs status:
+/opt/mapr/initscripts/mapr-mfs status
+2018-03-02 19:41:03,241 24889 RunCmd:268 INFO Disk list -v -n :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  disk list -v -n 
+2018-03-02 19:41:03,249 24889 LogCurrentInfo:1182 INFO start setup Trying to capture debug info, following errors can be ignored 
+
+2018-03-02 19:41:03,249 24889 RunCmd:268 INFO Disk list :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  disk list 
+2018-03-02 19:41:03,257 24889 LogCurrentInfo:1187 INFO ListDisks resp: status 0 count=0
+2018-03-02 19:41:03,257 24889 RunCmd:268 INFO DiskGroup list :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  dg list 
+2018-03-02 19:41:03,266 24889 LogCurrentInfo:1192 INFO No. of DGs (0)
+
+2018-03-02 19:41:03,266 24889 RunCmd:268 INFO sp list :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  sp list 
+2018-03-02 19:41:03,273 24889 LogCurrentInfo:1197 INFO 2018-03-02 19:41:03,2721 ERROR Global mrconfig.cc:644 No SP on this disk
+
+ListSPs resp: status 0:0
+2018-03-02 19:41:03,273 24889 LogCurrentInfo:1199 INFO 
+Done capturing debug info
+
+
+2018-03-02 19:41:03,273 24889 checkIfSSD:151 WARNING cannot open /sys/block/storagefilea/queue/rotational
+2018-03-02 19:41:03,274 24889 RunCmd:268 INFO Change mode: chmod g+rw /opt/mapr/disks/storagefilea:
+chmod g+rw /opt/mapr/disks/storagefilea
+2018-03-02 19:41:03,278 24889 RunCmd:268 INFO Change group /opt/mapr/disks/storagefilea:
+chgrp mapr /opt/mapr/disks/storagefilea
+2018-03-02 19:41:03,282 24889 RunCmd:268 INFO Disk init /opt/mapr/disks/storagefilea:
+/opt/mapr/server/mrconfig disk init  -F /opt/mapr/disks/storagefilea
+2018-03-02 19:41:03,291 24889 RunCmd:271 ERROR rc=22
+2018-03-02 19:41:03,291 24889 RunCmd:272 ERROR 2018-03-02 19:41:03,2898 ERROR Global mrconfig.cc:5245 InitDisk failed Invalid argument.(22).
+2018-03-02 19:41:03,291 24889 RunCmd:276 INFO Disk init /opt/mapr/disks/storagefilea tried. err 22
+2018-03-02 19:41:03,291 24889 InitDisk:398 INFO Disk init /opt/mapr/disks/storagefilea failed.Error 22, Invalid argument.Disk init /opt/mapr/disks/storagefilea
+2018-03-02 19:41:03,292 24889 AbortWithError:263 ERROR /opt/mapr/disks/storagefilea failed. Error 22, Invalid argument. ['  File "/opt/mapr/server/disksetup", line 1483, in <module>\n    RunDiskSetup();\n', '  File "/opt/mapr/server/disksetup", line 1362, in RunDiskSetup\n    InitAllDisk(force);\n', '  File "/opt/mapr/server/disksetup", line 733, in InitAllDisk\n    disk.InitDevices(forceOption);\n', '  File "/opt/mapr/server/disksetup", line 567, in InitDevices\n    InitDisk(dev, forceOption);\n', '  File "/opt/mapr/server/disksetup", line 399, in InitDisk\n    AbortWithError(rc, errMsg, devicePath);\n', '  File "/opt/mapr/server/disksetup", line 261, in AbortWithError\n    stack_trace = traceback.format_stack(frame)\n']
+2018-03-02 19:41:03,292 24889 LogCurrentInfo:1182 INFO Abort Trying to capture debug info, following errors can be ignored 
+
+2018-03-02 19:41:03,292 24889 RunCmd:268 INFO Disk list :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  disk list 
+2018-03-02 19:41:03,302 24889 LogCurrentInfo:1187 INFO ListDisks resp: status 0 count=0
+2018-03-02 19:41:03,302 24889 RunCmd:268 INFO DiskGroup list :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  dg list 
+2018-03-02 19:41:03,308 24889 LogCurrentInfo:1192 INFO No. of DGs (0)
+
+2018-03-02 19:41:03,308 24889 RunCmd:268 INFO sp list :
+/opt/mapr/server/mrconfig -h 127.0.0.1 -p 5660  sp list 
+2018-03-02 19:41:03,315 24889 LogCurrentInfo:1197 INFO 2018-03-02 19:41:03,3148 ERROR Global mrconfig.cc:644 No SP on this disk
+
+ListSPs resp: status 0:0
+2018-03-02 19:41:03,316 24889 LogCurrentInfo:1199 INFO 
+Done capturing debug info
+
+
+2018-03-02 19:41:03,316 24889 RestoreUdevRules:886 INFO Udev restoration not required.
+2018-03-02 19:41:03,316 24889 ExitDiskSetup:231 ERROR /opt/mapr/disks/storagefilea failed. Error 22, Invalid argument. ['  File "/opt/mapr/server/disksetup", line 1483, in <module>\n    RunDiskSetup();\n', '  File "/opt/mapr/server/disksetup", line 1362, in RunDiskSetup\n    InitAllDisk(force);\n', '  File "/opt/mapr/server/disksetup", line 733, in InitAllDisk\n    disk.InitDevices(forceOption);\n', '  File "/opt/mapr/server/disksetup", line 567, in InitDevices\n    InitDisk(dev, forceOption);\n', '  File "/opt/mapr/server/disksetup", line 399, in InitDisk\n    AbortWithError(rc, errMsg, devicePath);\n', '  File "/opt/mapr/server/disksetup", line 261, in AbortWithError\n    stack_trace = traceback.format_stack(frame)\n']

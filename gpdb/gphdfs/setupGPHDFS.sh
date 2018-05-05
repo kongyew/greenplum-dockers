@@ -39,7 +39,6 @@ function InstallJDK()
   if rpm -qa | grep wget  2>&1 > /dev/null; then
     gpssh -e -v -f ${GPDB_HOSTS} -u root yum -y install java-1.8.0-openjdk
   fi
-
   # sudo yum install java-1.8.0-openjdk
   # sudo yum install java-1.7.0-openjdk
   # sudo yum install java-1.6.0-openjdk
@@ -121,10 +120,7 @@ function SetupCDH5()
 ################################################################################
 function SetupHD2()
 {
-  echo "Remove docker image with tag:  ${DOCKER_TAG4}"
-  # Reference: https://gpdb.docs.pivotal.io/530/admin_guide/external/g-one-time-hdfs-protocol-installation.html
-  # gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "gpconfig -c gp_hadoop_target_version -v 'hdb2'"
-  # http://doc.mapr.com/display/MapR/Setting+Up+the+Client
+  echo "Setup Hortonworks"
 
   gpssh -e -v -f ${GPDB_HOSTS} -u gpadmin "gpconfig -c gp_hadoop_target_version -v 'gpmr-1.2'"
 
