@@ -11,7 +11,7 @@ before_install:
 #  - cd greenplum-dockers
 
 script:
-    - cd ${TRAVIS_BUILD_DIR}/greenplum-dockerd
+    - cd ${TRAVIS_BUILD_DIR}/greenplum-dockers
     - cd gpdb
     - docker build --build-arg GPDB_VERSION="5.7.0"  -t "kochanpivotal/gpdb5oss" -f gpdb/DockerfileOpenSource .
     - docker run --interactive --tty -h gpdbsne "kochanpivotal/gpdb5oss" /bin/bash -c "/usr/local/bin/setupGPDB.sh -g /opt/gpdb;/usr/local/bin/stopGPDB.sh  -g /opt/gpdb"
