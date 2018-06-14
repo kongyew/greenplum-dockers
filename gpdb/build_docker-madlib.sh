@@ -10,10 +10,9 @@ fi
 # Build docker image
 echo "Build docker image"
 docker run  --detach --rm --tty -h gpdbsne  \
-     ${DOCKER_MADLIB_TAG} "/bin/bash"
+     ${DOCKER_TAG} "/bin/bash"
 
-
-export CONTAINER_ID=`docker ps  -q --filter ancestor=${DOCKER_MADLIB_TAG} --format="{{.ID}}"`
+export CONTAINER_ID=`docker ps  -q --filter ancestor=${DOCKER_TAG} --format="{{.ID}}"`
 
 docker exec -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
 docker exec -i -t   ${CONTAINER_ID} "/opt/madlib/setupMadlib.sh"

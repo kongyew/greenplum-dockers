@@ -7,7 +7,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # reference : http://doc.mapr.com/display/MapR/MapR+Repositories+and+Package+Archives#MapRRepositoriesandPackageArchives-rpmanddebRepositoriesforMapRCoreSoftware
 DOWNLOAD_DIR="./HADOOP"
-VERSION="2.7.5"  # RHEL, SLES, UBUNTU
+VERSION="2.7.6"  # RHEL, SLES, UBUNTU
 
 if [ -d $DOWNLOAD_DIR ]; then
   echo "Using $DOWNLOAD_DIR"
@@ -28,14 +28,14 @@ HADOOP_SIG_REPO=https://dist.apache.org/repos/dist/release/hadoop/common/
 # http://mirrors.koehn.com/apache/hadoop/common/hadoop-2.7.5/hadoop-2.7.5.tar.gz
 
 
-if [ "$VERSION" == "2.7.5" ]; then
-  wget ${HADOOP_SITE1_REPO}/hadoop-2.7.5/hadoop-2.7.5.tar.gz -P ${DOWNLOAD_DIR}
+if [ "$VERSION" == "2.7.6" ]; then
+  wget ${HADOOP_SITE1_REPO}/hadoop-2.7.6/hadoop-2.7.6.tar.gz -P ${DOWNLOAD_DIR}
   #
-elif [ "$VERSION"  == "2.8.3" ]; then
-   wget ${HADOOP_SITE1_REPO}/hadoop-2.8.3/hadoop-2.8.3.tar.gz -P ${DOWNLOAD_DIR}
+elif [ "$VERSION"  == "2.8.4" ]; then
+   wget ${HADOOP_SITE1_REPO}/hadoop-2.8.4/hadoop-2.8.4.tar.gz -P ${DOWNLOAD_DIR}
    #
 elif [ "$VERSION"  == "2.9.0" ]; then
-     wget ${HADOOP_SITE1_REPO}/hadoop-2.9.0/hadoop-2.9.0.tar.gz -P ${DOWNLOAD_DIR}
+     wget ${HADOOP_SITE1_REPO}/hadoop-2.9.1/hadoop-2.9.1.tar.gz -P ${DOWNLOAD_DIR}
 else
   echo "Error: Please specify the variable $VERSION"
 fi

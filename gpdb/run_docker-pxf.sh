@@ -7,7 +7,6 @@
 . config.sh
 
 
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Including configurations
 . "${DIR}"/config.sh
@@ -27,11 +26,14 @@ docker run  -it --hostname=gpdbsne \
     --privileged \
     --publish 5432:5432 \
     --publish 88:22 \
+    --publish 28080:28080 \
     --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
     --volume "${VOLUME}":/code \
+    --env START_GPDB=yes \
+    --env START_PXF=yes \
     "${DOCKER_PXF_TAG}" bin/bash
 
-    # 
+    #
     # docker run  -it --hostname=gpdbpxf \
     #     --name gpdbpxf \
     #     --privileged \

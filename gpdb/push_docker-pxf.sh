@@ -11,7 +11,7 @@ function tag_and_push {
 	fi
 }
 
-echo "Pushing open source docker image to https://hub.docker.com/r/kochanpivotal/gpdb5oss/"
+echo "Pushing open source docker image to https://hub.docker.com/r/kochanpivotal/$DOCKER_PXF_TAG/"
 LATEST_TAG="latest"
 export IMAGE_NAME=$DOCKER_PXF_TAG
 

@@ -96,8 +96,23 @@ fi
 
 if [ -f $GPDB_HOME/greenplum_path.sh ]
 then
-  su gpadmin -l -c "echo \"host all all 0.0.0.0/0 md5\" >> /gpdata/master/gpseg-1/pg_hba.conf"
-  su gpadmin -l -c "export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source $GPDB_HOME/greenplum_path.sh;gpstop -a;  exit 0"
+
+
+  if [[ ! "$(whoami)" =~ ^(gpadmin|root)$ ]]
+  then
+        echo "Please run the script as gpadmin or root" >&2
+        exit 1
+  elif [ "$(whoami)" == "gpadmin" ]; then
+      echo \"host all all 0.0.0.0/0 md5\" >> /gpdata/master/gpseg-1/pg_hba.conf
+      export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source $GPDB_HOME/greenplum_path.sh;gpstop -a;  exit 0
+  else
+      su gpadmin -l -c "echo \"host all all 0.0.0.0/0 md5\" >> /gpdata/master/gpseg-1/pg_hba.conf"
+      su gpadmin -l -c "export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source $GPDB_HOME/greenplum_path.sh;gpstop -a;  exit 0"
+  fi
+
+
+
+
 else
   echo "Cannot find file: $GPDB_HOME/greenplum_path.sh"
 fi

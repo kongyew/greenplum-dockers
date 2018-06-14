@@ -8,8 +8,8 @@ FROM centos/systemd
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.4.1-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.4.1"
+ARG GPDB_VERSION="5.8.0-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.8.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION

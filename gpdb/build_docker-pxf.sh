@@ -26,25 +26,24 @@ done
 ################################################################################
 function BuildGreenplumwithPXF()
 {
-  echo "Remove docker image with tag:  ${DOCKER_TAG}"
-  if docker images |grep ${DOCKER_TAG}; then
-       docker rmi -f "${DOCKER_TAG}"
-  fi
-
-  echo "Building docker for ${GPDB_VERSION}"
-
-  # https://docs.docker.com/engine/reference/commandline/build/#specifying-target-build-stage-target
-  # Squash to reduce file size
-  docker build --build-arg GPDB_VERSION="${GPDB_VERSION}" --build-arg GPDB_DOWNLOAD="${GPDB_DOWNLOAD}"  --build-arg build_env="${BUILD_ENV}" --force-rm --squash -t "${DOCKER_TAG}" .
+  # echo "Remove docker image with tag:  ${DOCKER_TAG}"
+  # if docker images |grep ${DOCKER_TAG}; then
+  #      docker rmi -f "${DOCKER_TAG}"
+  # fi
+  #
+  # echo "Building docker for ${GPDB_VERSION}"
+  #
+  # # https://docs.docker.com/engine/reference/commandline/build/#specifying-target-build-stage-target
+  # # Squash to reduce file size
+  # docker build --build-arg GPDB_VERSION="${GPDB_VERSION}" --build-arg GPDB_DOWNLOAD="${GPDB_DOWNLOAD}"  --build-arg build_env="${BUILD_ENV}" --force-rm --squash -t "${DOCKER_TAG}" .
 
   # Build docker image
   echo "Build docker image" # -v /sys /fs/cgroup:/sys/fs/cgroup:ro  \
-  docker run --interactive  --privileged --tty -h -v /code .. "${CONTAINER_NAME}" \
-       "${DOCKER_TAG}" /bin/bash -c "/usr/local/bin/setupGPDB.sh;/usr/local/bin/setupPXF.sh;/usr/local/bin/startPXF.sh;cp /code/gpdb/pxf_automation-master /tmp"
+  docker run --interactive  --privileged --tty -h  "${CONTAINER_NAME}" \
+       "${DOCKER_LATEST_TAG}" /bin/bash -c "/usr/local/bin/setupGPDB.sh;/usr/local/bin/setupPXF.sh;/usr/local/bin/startPXF.sh"
+     
 
-
-
-  echo "Commit docker image"
+  echo "#### Commit docker image"
   export CONTAINER_ID=`docker ps -a -n=1 -q`
   docker commit -m "${DOCKER_LABEL}" -a "author" "${CONTAINER_ID}" "${DOCKER_PXF_TAG}"
 
@@ -68,8 +67,6 @@ function BuildGreenplumwithPXF_USE_GPDBIMAGE()
   #        -v /sys/fs/cgroup:/sys/fs/cgroup:ro  \
   #           "${DOCKER_TAG}" "bin/bash" -c "/usr/local/bin/startGPDB.sh;/usr/local/bin/setupPXF.sh;/usr/local/bin/startPXF.sh"
   #
-
-
   export CONTAINER_ID=`docker ps  -q --filter ancestor="${DOCKER_TAG}" --format="{{.ID}}"`
   #
   docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
@@ -88,10 +85,7 @@ function BuildGreenplumwithPXF_USE_GPDBIMAGE()
   docker commit -m "${DOCKER_PXF_LABEL}" -a "author" ${CONTAINER_ID} ${DOCKER_PXF_TAG}
 }
 
-# Export images to a file
-#docker save ${DOCKER_PXF_TAG} > /tmp/PXF.tar
 
-# docker commit -m "GPDB 5-PXF" -a "author" ${CONTAINER_ID} kochanpivotal/gpdb5-pxf
 
 BuildGreenplumwithPXF
 

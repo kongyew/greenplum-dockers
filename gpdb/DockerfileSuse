@@ -6,8 +6,8 @@ FROM opensuse:42.3
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.7.0-sles11-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.7.0"
+ARG GPDB_VERSION="5.8.0-sles11-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.8.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
