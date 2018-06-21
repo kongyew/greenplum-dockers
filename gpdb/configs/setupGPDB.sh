@@ -48,6 +48,21 @@ done
 #    export GPDB_HOME=$GPHOME
 #    echo "Variable GPDB_HOME:$GPDB_HOME"
 # fi
+HOSTNAME=`hostname`
+rm /tmp/gpdb-hosts
+echo $HOSTNAME > /tmp/gpdb-hosts
+echo "127.0.0.1 $HOSTNAME $HOSTNAME.localdomain" >> /etc/hosts \
+# Replace master hostname in the file
+sed '/MASTER_HOSTNAME/ s/gpdbsne/'"$HOSTNAME"'/' /tmp/gpinitsystem_singlenode > /tmp/gpinitsystem_singlenode1
+rm -f /tmp/gpinitsystem_singlenode
+mv -f /tmp/gpinitsystem_singlenode1 /tmp/gpinitsystem_singlenode
+
+# remove gpdata Files
+rm -rf /gpdata
+mkdir -p /gpdata/master /gpdata/segments
+chown -R gpadmin /gpdata
+chmod +rw /tmp/gpinitsystem_singlenode
+chown gpadmin /tmp/gpinitsystem_singlenode
 su gpadmin -l -c "source $GPDB_HOME/greenplum_path.sh;gpssh-exkeys -f /tmp/gpdb-hosts"
 su gpadmin -l -c "source $GPDB_HOME/greenplum_path.sh;gpinitsystem -a -c  /tmp/gpinitsystem_singlenode -h /tmp/gpdb-hosts; exit 0 "
 su gpadmin -l -c "export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source $GPDB_HOME/greenplum_path.sh;psql -d template1 -c \"alter user gpadmin password 'pivotal'\"; createdb gpadmin;  exit 0"

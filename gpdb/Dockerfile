@@ -7,8 +7,8 @@ FROM centos/systemd:latest
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.8.0-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.8.0"
+ARG GPDB_VERSION="5.9.0-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.9.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV ENV_GPDB_VERSION=$GPDB_VERSION
@@ -17,10 +17,10 @@ ENV ENV_GPDB_VERSION=$GPDB_VERSION
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
-#COPY ${GPDB_DOWNLOAD}/madlib*.tar /tmp/
+COPY ${GPDB_DOWNLOAD}/madlib*gp5-rhel7-x86_64.tar.gz /tmp
 #COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
-COPY ${GPDB_DOWNLOAD}/greenplum-cc-web-4.1.0-LINUX-x86_64.zip /tmp
-#COPY ${GPDB_DOWNLOAD}/greenplum-text-2.3.1-rhel6_x86_64.tar /tmp
+COPY ${GPDB_DOWNLOAD}/greenplum-cc-web-*.0-LINUX-x86_64.zip /tmp
+COPY ${GPDB_DOWNLOAD}/greenplum-text-*-rhel6_x86_64.tar.gz /tmp
 
 
 COPY configs /opt/configs/
