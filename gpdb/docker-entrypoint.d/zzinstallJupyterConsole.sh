@@ -9,6 +9,7 @@ elif [ -f /etc/lsb-release ]; then # Ubuntu
 fi
 ## This script assumes startSSH.sh and startInit.sh are executed earlier
 if [ -z  "$INSTALL_JUPYTER_CONSOLE" ]; then
+  echo "INSTALL_JUPYTER_CONSOLE environment variable is not set"
   exit 0
 fi
 
@@ -17,6 +18,7 @@ if [[ "$INSTALL_JUPYTER_CONSOLE" == "1" || "$INSTALL_JUPYTER_CONSOLE" == 'yes' ]
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
     python get-pip.py
     pip install jupyter-console
+    jupyter console &
 else
   exit 0
 fi

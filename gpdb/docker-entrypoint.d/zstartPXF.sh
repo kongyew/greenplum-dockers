@@ -9,6 +9,7 @@ elif [ -f /etc/lsb-release ]; then # Ubuntu
 fi
 ## This script assumes startSSH.sh and startInit.sh are executed earlier
 if [ -z  "$START_PXF" ]; then
+  echo "START_PXF environment variable is not set"
   exit 0
 fi
 

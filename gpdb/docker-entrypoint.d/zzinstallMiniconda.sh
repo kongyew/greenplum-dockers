@@ -9,6 +9,7 @@ elif [ -f /etc/lsb-release ]; then # Ubuntu
 fi
 ## This script assumes startSSH.sh and startInit.sh are executed earlier
 if [ -z  "$INSTALL_MINICONDA" ]; then
+  echo "INSTALL_MINICONDA environment variable is not set"
   exit 0
 fi
 

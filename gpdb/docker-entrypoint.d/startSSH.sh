@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 [[ ${DEBUG} == true ]] && set -x
-set -x
+#set -x
 
 # Start the first process
 #/etc/init.d/sshd start &

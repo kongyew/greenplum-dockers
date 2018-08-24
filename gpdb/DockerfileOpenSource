@@ -1,8 +1,8 @@
 #
 #  Ubuntu Dockerfile for open source Greenplum
 #
-#FROM ubuntu:xenial
-FROM phusion/baseimage
+FROM ubuntu:xenial
+#FROM phusion/baseimage
 ENV LANG en_US.UTF-8
 
 # Argument
@@ -65,8 +65,9 @@ RUN apt-get --assume-yes update && apt-get -y install sudo software-properties-c
        && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
        && locale-gen en_US.UTF-8 \
        && apt-get clean all \
-       &&  rm -f /etc/service/sshd/down \
-       && /etc/my_init.d/00_regen_ssh_host_keys.sh \
+       &&  rm -f /etc/service/sshd/down
+       # \
+       #&& /etc/my_init.d/00_regen_ssh_host_keys.sh \
 
 EXPOSE 5432 22
 EXPOSE 40000 40001 40002

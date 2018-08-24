@@ -15,5 +15,6 @@ docker run  -it --hostname=gpdbsne \
     --publish 28080:28080 \
     --volume ${VOLUME}:/code \
     -e START_GPDB=yes \
+    -e SETUP_PG_HBA=yes \
     ${DOCKER_LATEST_TAG} bin/bash
     #--link 260_namenode_1:260_namenode_1 \
