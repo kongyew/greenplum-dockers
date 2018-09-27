@@ -28,6 +28,9 @@ RUN apt-get --assume-yes update && apt-get -y install sudo software-properties-c
  && add-apt-repository ppa:greenplum/db \
  && apt-get --assume-yes update \
  && apt-get -y install greenplum-db-oss \
+ && apt-add-repository ppa:ansible/ansible \
+ && apt --assume-yes update \
+ && apt -y install ansible \
  && . /opt/gpdb/greenplum_path.sh \
  && cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode . \
  && cp /opt/configs/*.sh /usr/local/bin/ \

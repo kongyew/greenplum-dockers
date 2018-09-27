@@ -1,0 +1,181 @@
+---
+
+- name: run the playbook tasks on the localhost
+  hosts: 127.0.0.1
+  vars:
+    CDHReleaseMajorVersion: 5
+    HDPReleaseMinorVersion: 8
+  # Reference
+  # https://galaxy.ansible.com/geerlingguy/java
+  # https://galaxy.ansible.com/william-yeh/oracle-java
+  roles:
+    - role: geerlingguy.java
+      when: "ansible_os_family == 'RedHat'"
+      java_packages:
+        - java-1.8.0-openjdk
+  roles:
+    - role: geerlingguy.java
+      when: "ansible_os_family == 'Debian'"
+      java_packages:
+        - openjdk-8-jdk
+
+  connection: local
+#  become: yes
+ # These variables are needed to bootstrap Ansible
+  vars:
+    ansible_sudo_password: '{{ lookup("env", "SUDO_PASSWORD") }}'
+    # etc.
+
+  # Use 'set_fact' not 'vars' for the rest of the variables to ensure they are are evaluated immediately, to avoid getting this warning later:
+  # "[WARNING]: when statements should not include jinja2 templating delimiters" (see https://github.com/ansible/ansible/issues/22397)
+  pre_tasks:
+    - name: Loading environment variables
+      tags: always
+      set_fact:
+        # I write the variables in uppercase so they match the .env file - but you don't have to
+        # GPDB_HOME booleans I use the strings "true" and "false", and convert them to booleans at this point
+        GPDB_HOME: '{{ lookup("env", "GPDB_HOME") }}'       
+        MASTER_DATA_DIRECTORY: '{{ lookup("env", "MASTER_DATA_DIRECTORY") }}'      
+        MASTER_DATA_TEST: '{{ lookup("env", "MASTER_DATA_DIRECTORY") == "true" }}'
+        # etc.
+  tasks:
+
+  - name: print out the hostname of target
+    command: hostname
+  
+  - name: Yum install {{ item }}
+    action: yum pkg={{ item }} state=installed
+    when: "ansible_os_family == 'RedHat'"
+    with_items:
+    - wget
+    - tar
+    - gzip
+    - unzip
+    - java-1.8.0-openjdk
+
+
+  - name: Ansible check file exists example.
+    stat:
+       path: /usr/local/greenplum-db
+    register: greenplum-db_details
+
+  # - debug:
+  #     msg: "The file or directory exists"
+  #     when: greenplum-dbdetails.stat.exists
+
+
+  - name: Download cloudera-cdh5.repo
+    get_url:
+      url: https://archive.cloudera.com/cdh5/redhat/7/x86_64/cdh/cloudera-cdh5.repo
+      dest: /tmp/cloudera-cdh5.repo
+      mode: 0440
+
+  - name: Ansible copy file to remote server
+    copy:
+        src: /tmp/cloudera-cdh5.repo
+        dest: /etc/yum.repos.d
+        force: yes
+
+  - name: install the 'hadoop-client, hive, hbase' package group
+    yum:
+      name: "{{ packages }}"
+      state: present
+    vars:
+      packages:
+        - hadoop-client
+        - hive 
+        - hbase
+
+  - name: ensure a list of packages installed
+    yum:
+      name: "{{ packages }}"
+    vars:
+      packages:
+        - hadoop-client
+        - hive 
+        - hbase
+  # Handler showing how to clean yum metadata cache
+  - name: yum-clean-metadata
+    command: yum clean metadata
+    args:
+      warn: no
+
+  - name: Java version
+    shell: java -version 2>&1 | grep version | awk '{print $3}' | sed 's/"//g' 
+    register: java_version 
+
+  - debug: msg="{{ java_version.stdout_lines }}"
+
+
+
+
+  # - name: Java JDK Path 
+  #   command:  pwd /usr/lib/jvm/java-1.8.0-openjdk-*/jre_
+  #   register: jdk_path 
+
+  # - debug: msg="{{ jdk_path.stdout_lines }}"
+
+  - name: Adding JRE_HOME path in the bashrc files
+    lineinfile: dest=/root/.bashrc line='export JRE_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
+
+
+  - name: Adding JAVA_HOME path in the bashrc files
+    lineinfile: dest=/root/.bashrc line='export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
+
+
+  - name: Adding JRE_HOME path in the bashrc files
+    lineinfile: dest=/home/gpadmin/.bashrc line='export JRE_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
+    become: yes
+    become_user: gpadmin
+
+  - name: Adding JAVA_HOME path in the bashrc files
+    lineinfile: dest=/home/gpadmin/.bashrc line='export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
+    become: yes
+    become_user: gpadmin
+
+  - name: /usr/local/greenplum-db/pxf/bin/pxf init
+    command: /usr/local/greenplum-db/pxf/bin/pxf init
+    environment:
+      JAVA_HOME: /usr/lib/jvm/jre-openjdk/
+    register: pxf_init_output
+    become: yes
+    become_user: gpadmin
+  - debug: msg="{{ pxf_init_output.stdout_lines }}"
+
+
+  - name: /usr/local/greenplum-db/pxf/bin/pxf start
+    command: /usr/local/greenplum-db/pxf/bin/pxf start
+    environment:
+      JAVA_HOME: /usr/lib/jvm/jre-openjdk/
+    register: pxf_start_output
+    become: yes
+    become_user: gpadmin
+  - debug: msg="{{ pxf_start_output.stdout_lines }}"
+
+   
+  # - name: "Get process PID"
+  #   shell: >
+  #     echo -n
+  #     $(ps -aux | grep pxf)
+  #   args:
+  #     executable: "{{ shell_path }}"
+  #   register: my_procs
+
+  # - debug:
+  #     var: pxf_init_output
+
+  # - name: add CDH5 repo
+  #   yum_repository:
+  #     name: cloudera-cdh5
+  #     file: cloudera-cdh5
+  #     description: CDH 5 YUM repo
+  #     baseurl:  https://archive.cloudera.com/cdh5/redhat/7/x86_64/cdh/
+  #   when: "ansible_os_family == 'RedHat'"
+
+
+  # - name: install Hadoop packages
+  #   tags: packages
+  #   yum: name={{ item }} state=latest
+  #   with_items:
+  #     - hadoop
+  #   when: "ansible_os_family == 'RedHat'"

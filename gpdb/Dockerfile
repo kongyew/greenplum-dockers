@@ -7,8 +7,8 @@ FROM centos/systemd:latest
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.10.0-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.10.0"
+ARG GPDB_VERSION="5.11.1-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.11.1"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV GPDB_VERSION=$GPDB_VERSION
@@ -22,7 +22,6 @@ COPY ${GPDB_DOWNLOAD}/madlib-1.15-gp5-rhel7-x86_64.tar.gz /tmp
 #COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
 COPY ${GPDB_DOWNLOAD}/greenplum-cc-web-*.*-LINUX-x86_64.zip /tmp
 COPY ${GPDB_DOWNLOAD}/greenplum-text-*-rhel6_x86_64.tar.gz /tmp
-
 
 COPY configs /opt/configs/
 COPY PXF    /opt/PXF/
@@ -40,6 +39,7 @@ RUN echo root:pivotal | chpasswd \
     && yum install -y vim wget unzip which tar more util-linux-ng passwd \
     && yum install -y openssh-clients openssh-server ed m4 sudo krb5-libs krb5-workstation \
     && yum install -y cronie cronie-anacron iproute net-tools less \
+    && yum install -y epel-release ansible \
     && unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
     && rm /tmp/greenplum-db-${GPDB_VERSION}.zip \
     && sed -i s/"more << EOF"/"cat << EOF"/g /tmp/greenplum-db-${GPDB_VERSION}.bin \
@@ -48,9 +48,9 @@ RUN echo root:pivotal | chpasswd \
     && cat /opt/configs/sysctl.conf.add >> /etc/sysctl.conf \
     && cat /opt/configs/limits.conf.add >> /etc/security/limits.conf \
     && cp /opt/configs/*.sh /usr/local/bin/ \
-        && chmod +x /usr/local/bin/*.sh \
-        && chmod +x /opt/PXF/*.sh \
-        && cp /opt/PXF/*.sh /usr/local/bin \
+    && chmod +x /usr/local/bin/*.sh \
+    && chmod +x /opt/PXF/*.sh \
+    && cp /opt/PXF/*.sh /usr/local/bin \
         && chmod +x /opt/madlib/*.sh \
         && cp /opt/madlib/*.sh /usr/local/bin \
         && chmod +x /opt/pl_java/*.sh \

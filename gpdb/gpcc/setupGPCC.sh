@@ -76,29 +76,21 @@ else
   LINE_VALUE="host   all   gpmon   ${HOSTNAME}/32   md5"
   PG_HBA_CONF="${MASTER_DATA_DIRECTORY}/pg_hba.conf"
   SED_VALUE="$a ${LINE_VALUE}"
+
   #host   all   gpmon   <IP_of_host>/32   md5
-  value=$( grep -ic "gpmon" $MASTER_DATA_DIRECTORY/pg_hba.conf )
-  if [ $value -eq 1 ]
-  then
-    echo "Found gpmon in this file : $MASTER_DATA_DIRECTORY/pg_hba.conf"
-    #  directly modify the file:
-    sed -i '/gpmon/d' $MASTER_DATA_DIRECTORY/pg_hba.conf
-    sed -i -e "\$a ${LINE_VALUE}" ${PG_HBA_CONF}
-  else
-    sed -i -e "\$a ${LINE_VALUE}" ${PG_HBA_CONF}
-  fi
+
+  # value=$( grep -ic "gpmon" $MASTER_DATA_DIRECTORY/pg_hba.conf )
+  # if [ "$value" -eq 0 ]
+  # then
+  #   sed -i -e "\$a ${LINE_VALUE}" ${PG_HBA_CONF}  
+  # else
+  #   echo "Found gpmon in this file : $MASTER_DATA_DIRECTORY/pg_hba.conf"
+  #   #  directly modify the file:
+  #   sed -i '/gpmon/d' $MASTER_DATA_DIRECTORY/pg_hba.conf
+  #   sed -i -e "\$a ${LINE_VALUE}" ${PG_HBA_CONF}
+  # fi
 fi
 
-
-if [[ ! "$(whoami)" =~ ^(gpadmin|root)$ ]]
-then
-    echo "Please run the script as gpadmin or root" >&2
-    exit 1
-elif [ "$(whoami)" == "gpadmin" ]; then
-    gpstop -u
-else
-    su gpadmin -l -c "gpstop -u"
-fi
 
 export GPCC_ZIP=`ls  ./greenplum-cc-web-*-LINUX-x86_64.zip`
 unzip ${GPCC_ZIP}

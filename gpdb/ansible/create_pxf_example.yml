@@ -1,0 +1,108 @@
+---
+
+- name: run the playbook tasks on the localhost
+  hosts: 127.0.0.1
+  vars:
+    CDHReleaseMajorVersion: 5
+    HDPReleaseMinorVersion: 8
+ 
+  vars:
+    ansible_sudo_password: '{{ lookup("env", "SUDO_PASSWORD") }}'
+    # etc.
+
+  # Use 'set_fact' not 'vars' for the rest of the variables to ensure they are are evaluated immediately, to avoid getting this warning later:
+  # "[WARNING]: when statements should not include jinja2 templating delimiters" (see https://github.com/ansible/ansible/issues/22397)
+  pre_tasks:
+    - name: Loading environment variables
+      tags: always
+      set_fact:
+        # I write the variables in uppercase so they match the .env file - but you don't have to
+        # GPDB_HOME booleans I use the strings "true" and "false", and convert them to booleans at this point
+        GPDB_HOME: '{{ lookup("env", "GPDB_HOME") }}'       
+        MASTER_DATA_DIRECTORY: '{{ lookup("env", "MASTER_DATA_DIRECTORY") }}'      
+        MASTER_DATA_TEST: '{{ lookup("env", "MASTER_DATA_DIRECTORY") == "true" }}'
+        # etc.
+  tasks:
+
+  - name: print out the hostname of target
+    command: hostname
+  - name: install postgresql package
+    yum : name={{ item }} state=installed
+    with_items:
+      - python-psycopg2
+      - python-pip
+    
+  - name: install psycopg2 python module
+    pip: name=psycopg2 
+
+# Create a new database with name "acme"
+  # - postgresql_db:
+  #     name: acme1
+  #     login_host: local
+  #     login_user: gpadmin
+  #     login_password: pivotal
+
+  - stat:
+      path: /usr/local/greenplum-db/greenplum_path.sh
+    register: greenplum_path_exists
+  
+  - debug:
+    msg: "Path exists and is a directory"
+    when: greenplum_path_exists.stat.isdir is defined and greenplum_path_exists.stat.isdir
+
+
+  - name: Check whether DB exits 
+    shell: source /usr/local/greenplum-db/greenplum_path.sh && psql -lqt | cut -d \| -f 1 | grep  TESTDB1
+    args : 
+      executable :  /bin/bash
+    environment:
+      TESTDB: testdb
+    become: yes
+    become_user: gpadmin
+    register: checkdb_output
+    failed_when: "'FAILED' in checkdb_output.stderr"
+
+
+  - debug: msg="{{ checkdb_output.stderr }}"
+  - debug: msg="{{ checkdb_output.stdout_lines }}"
+
+
+  - name: Create DB
+    shell: source /usr/local/greenplum-db/greenplum_path.sh && createdb TESTDB1
+    args : 
+      executable :  /bin/bash
+    environment:
+      TESTDB: testdb
+    register: createdb_output
+    become: yes
+    become_user: gpadmin
+  - debug: msg="{{ createdb_output.stdout_lines }}"
+
+
+
+  # - name: "Get process PID"
+  #   shell: >
+  #     echo -n
+  #     $(ps -aux | grep pxf)
+  #   args:
+  #     executable: "{{ shell_path }}"
+  #   register: my_procs
+
+  # - debug:
+  #     var: pxf_init_output
+
+  # - name: add CDH5 repo
+  #   yum_repository:
+  #     name: cloudera-cdh5
+  #     file: cloudera-cdh5
+  #     description: CDH 5 YUM repo
+  #     baseurl:  https://archive.cloudera.com/cdh5/redhat/7/x86_64/cdh/
+  #   when: "ansible_os_family == 'RedHat'"
+
+
+  # - name: install Hadoop packages
+  #   tags: packages
+  #   yum: name={{ item }} state=latest
+  #   with_items:
+  #     - hadoop
+  #   when: "ansible_os_family == 'RedHat'"

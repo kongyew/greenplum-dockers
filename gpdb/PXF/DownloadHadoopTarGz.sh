@@ -36,6 +36,8 @@ elif [ "$VERSION"  == "2.8.4" ]; then
    #
 elif [ "$VERSION"  == "2.9.0" ]; then
      wget ${HADOOP_SITE1_REPO}/hadoop-2.9.1/hadoop-2.9.1.tar.gz -P ${DOWNLOAD_DIR}
+elif [ "$VERSION"  == "3.1.1" ]; then
+     wget ${HADOOP_SITE1_REPO}/hadoop-3.1.1//hadoop-3.1.1.tar.gz -P ${DOWNLOAD_DIR}
 else
   echo "Error: Please specify the variable $VERSION"
 fi

@@ -9,7 +9,7 @@ fi
 
 # Build docker image
 echo "Build docker image"
-docker run  --detach --rm --tty -h gpdbsne-madlib \
+docker run  --detach --rm --tty -h gpdbsne \
     --privileged \
     -e START_GPDB=yes  \
      ${DOCKER_TAG} -sh -c "/bin/bash"
