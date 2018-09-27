@@ -23,6 +23,7 @@ function InstallJDK_ALLSEGMENTS()
   echo "Install Java on each Greenplum Database segment host"
   # Fix this issue "Rpmdb checksum is invalid: dCDPT(pkg checksums)"
   gpssh -e -v -f ${GPDB_HOSTS} -u root rpm --rebuilddb
+  gpssh -e -v -f ${GPDB_HOSTS} -u root yum -y update
   #;  yum clean all
   gpssh -e -v -f ${GPDB_HOSTS} -u root yum -y install wget
 
