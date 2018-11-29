@@ -22,13 +22,13 @@ export DOCKER_LATEST_TAG="kochanpivotal/gpdb5:latest"
 export DOCKER_SUSE_LATEST_TAG="kochanpivotal/gpdb5suse:latest"
 
 # CHANGEME to build different GPDB version
-export GPDB_VERSION="5.12.0-rhel6-x86_64"
+export GPDB_VERSION="5.13.0-rhel6-x86_64"
 #export GPDB_VERSION="4.3.19.0-rhel5-x86_64"
 # greenplum-db-4.3.19.0-rhel5-x86_64.zip
-export GPDB_SUSE_VERSION="5.12.0-sles11-x86_64"
+export GPDB_SUSE_VERSION="5.13.0-sles11-x86_64"
 
 #export GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_4.3.19.0"
-export GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.12.0"
+export GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.13.0"
 
 export DOCKER_PXF_LABEL="GPDB 5-PXF"
 export DOCKER_PXF_TAG="kochanpivotal/gpdb5-pxf"

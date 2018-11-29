@@ -7,8 +7,8 @@ FROM centos/systemd:latest
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.12.0-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.12.0"
+ARG GPDB_VERSION="5.13.0-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.13.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV GPDB_VERSION=$GPDB_VERSION
@@ -18,19 +18,19 @@ COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
 
-COPY ${GPDB_DOWNLOAD}/madlib-1.15-gp5-rhel7-x86_64.tar.gz /tmp
+# COPY ${GPDB_DOWNLOAD}/madlib-1.15.1-gp5-rhel7-x86_64.tar.gz /tmp
 COPY ${GPDB_DOWNLOAD}/greenplum-cc-web-*.*-LINUX-x86_64.zip /tmp
-COPY ${GPDB_DOWNLOAD}/greenplum-text-*-rhel6_x86_64.tar.gz /tmp
+# COPY ${GPDB_DOWNLOAD}/greenplum-text-*-rhel6_x86_64.tar.gz /tmp
+
 
 COPY configs /opt/configs/
 COPY PXF    /opt/PXF/
 COPY madlib    /opt/madlib/
 COPY dblink    /opt/dblink/
-COPY pl_java    /opt/pl_java/
+#COPY pl_java    /opt/pl_java/
 COPY gphdfs    /opt/gphdfs/
 COPY gpcc    /opt/gpcc/
 COPY ansible /opt/ansible/
-
 
 ################################################################################
 #
@@ -38,9 +38,9 @@ COPY ansible /opt/ansible/
 ################################################################################
 RUN echo root:pivotal | chpasswd \
     && yum install -y vim wget unzip which tar more util-linux-ng passwd \
-    && yum install -y openssh-clients openssh-server ed m4 sudo krb5-libs krb5-workstation \
-    && yum install -y cronie cronie-anacron iproute net-tools less \
-    && yum install -y epel-release ansible \
+     openssh-clients openssh-server ed m4 sudo krb5-libs krb5-workstation \
+     cronie cronie-anacron iproute net-tools less \
+     epel-release ansible \
     && unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
     && rm /tmp/greenplum-db-${GPDB_VERSION}.zip \
     && sed -i s/"more << EOF"/"cat << EOF"/g /tmp/greenplum-db-${GPDB_VERSION}.bin \
@@ -52,11 +52,7 @@ RUN echo root:pivotal | chpasswd \
     && chmod +x /usr/local/bin/*.sh \
     && chmod +x /opt/PXF/*.sh \
     && cp /opt/PXF/*.sh /usr/local/bin \
-    && chmod +x /opt/madlib/*.sh \
-    && cp /opt/madlib/*.sh /usr/local/bin \
-    && chmod +x /opt/pl_java/*.sh \
-        && cp /opt/pl_java/*.sh /usr/local/bin \
-        && /usr/sbin/groupadd gpadmin \
+    && /usr/sbin/groupadd gpadmin \
         && /usr/sbin/useradd gpadmin -g gpadmin -G wheel \
         && echo "pivotal"|passwd --stdin gpadmin \
         && echo "gpadmin        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers \
