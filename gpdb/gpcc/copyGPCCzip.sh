@@ -45,9 +45,10 @@ fi
 
 
 source /usr/local/greenplum-db/greenplum_path.sh
+export GPCC_DIR=`ls gpccinstall-*`
+export GPCC_BIN="./$GPCC_DIR "
 
-
-
+source /usr/local/greenplum-db/greenplum_path.sh
 echo -e "changeme" | ${GPCC_BIN} -W
 
 

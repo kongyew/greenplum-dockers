@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Including configurations
 . config.sh
 
@@ -16,7 +15,7 @@ CONTAINER_ID=$(docker ps -aq --filter name=${CONTAINER_NAME})
 if [ "$CONTAINER_ID" != "" ]; then
   docker rm "$CONTAINER_ID"
 fi
-export VOLUME=`pwd`
+
 
 docker run  -it --hostname=gpdbsne \
     --name ${CONTAINER_NAME} \
@@ -27,5 +26,5 @@ docker run  -it --hostname=gpdbsne \
     --volume /sys/fs/cgroup:/sys/fs/cgroup:ro \
     --volume "${VOLUME}":/code \
     --env START_GPDB=yes \
-    --env START_PXF=yes \
+    --env INSTALL_COMMANDCENTER=yes \
     "${DOCKER_PXF_TAG}" bin/bash

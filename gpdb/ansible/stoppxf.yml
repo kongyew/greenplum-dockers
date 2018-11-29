@@ -3,8 +3,7 @@
 - name: run the playbook tasks on the localhost
   hosts: 127.0.0.1
   vars:
-    CDHReleaseMajorVersion: 5
-    HDPReleaseMinorVersion: 8
+    TESTVAR: 5
   connection: local
 #  become: yes
  # These variables are needed to bootstrap Ansible
@@ -29,45 +28,10 @@
   - name: print out the hostname of target
     command: hostname
 
-  - name: Yum install {{ item }}
-    action: yum pkg={{ item }} state=installed
-    when: "ansible_os_family == 'RedHat'"
-    with_items:
-    - wget
-    - tar
-    - gzip
-    - unzip
-    - java-1.8.0-openjdk
-
-
   - name: Ansible check file exists example.
     stat:
        path: /usr/local/greenplum-db
     register: greenplum-db_details
-
-
-  - name: Java version
-    shell: java -version 2>&1 | grep version | awk '{print $3}' | sed 's/"//g'
-    register: java_version
-
-  - debug: msg="{{ java_version.stdout_lines }}"
-
-  - name: Adding JRE_HOME path in the bashrc files
-    lineinfile: dest=/root/.bashrc line='export JRE_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
-
-
-  - name: Adding JAVA_HOME path in the bashrc files
-    lineinfile: dest=/root/.bashrc line='export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
-
-  - name: Adding JRE_HOME path in the bashrc files
-    lineinfile: dest=/home/gpadmin/.bashrc line='export JRE_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
-    become: yes
-    become_user: gpadmin
-
-  - name: Adding JAVA_HOME path in the bashrc files
-    lineinfile: dest=/home/gpadmin/.bashrc line='export JAVA_HOME=/usr/lib/jvm/jre-openjdk/' insertafter='EOF'  state=present
-    become: yes
-    become_user: gpadmin
 
   - name: /usr/local/greenplum-db/pxf/bin/pxf init
     command: /usr/local/greenplum-db/pxf/bin/pxf init
@@ -78,14 +42,14 @@
     become_user: gpadmin
   - debug: msg="{{ pxf_init_output.stdout_lines }}"
 
-  - name: /usr/local/greenplum-db/pxf/bin/pxf start
-    command: /usr/local/greenplum-db/pxf/bin/pxf start
+  - name: /usr/local/greenplum-db/pxf/bin/pxf stop
+    command: /usr/local/greenplum-db/pxf/bin/pxf stop
     environment:
       JAVA_HOME: /usr/lib/jvm/jre-openjdk/
-    register: pxf_start_output
+    register: pxf_stop_output
     become: yes
     become_user: gpadmin
-  - debug: msg="{{ pxf_start_output.stdout_lines }}"
+  - debug: msg="{{ pxf_stop_output.stdout_lines }}"
 
   # - name: "Get process PID"
   #   shell: >

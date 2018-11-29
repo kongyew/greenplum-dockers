@@ -1,3 +1,0 @@
-[submodule "gpdb/greenplum-downloader"]
-	path = gpdb/greenplum-downloader
-	url = https://github.com/kongyew/greenplum-downloader.git

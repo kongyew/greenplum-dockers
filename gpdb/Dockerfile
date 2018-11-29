@@ -7,19 +7,18 @@ FROM centos/systemd:latest
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.11.1-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.11.1"
+ARG GPDB_VERSION="5.12.0-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.12.0"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV GPDB_VERSION=$GPDB_VERSION
 ENV GPDB_DOWNLOAD=$GPDB_DOWNLOAD
-
 ################################################################################
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
+
 COPY ${GPDB_DOWNLOAD}/madlib-1.15-gp5-rhel7-x86_64.tar.gz /tmp
-#COPY ${GPDB_DOWNLOAD}/greenplum*web*.zip /tmp
 COPY ${GPDB_DOWNLOAD}/greenplum-cc-web-*.*-LINUX-x86_64.zip /tmp
 COPY ${GPDB_DOWNLOAD}/greenplum-text-*-rhel6_x86_64.tar.gz /tmp
 
@@ -30,6 +29,8 @@ COPY dblink    /opt/dblink/
 COPY pl_java    /opt/pl_java/
 COPY gphdfs    /opt/gphdfs/
 COPY gpcc    /opt/gpcc/
+COPY ansible /opt/ansible/
+
 
 ################################################################################
 #
@@ -51,9 +52,9 @@ RUN echo root:pivotal | chpasswd \
     && chmod +x /usr/local/bin/*.sh \
     && chmod +x /opt/PXF/*.sh \
     && cp /opt/PXF/*.sh /usr/local/bin \
-        && chmod +x /opt/madlib/*.sh \
-        && cp /opt/madlib/*.sh /usr/local/bin \
-        && chmod +x /opt/pl_java/*.sh \
+    && chmod +x /opt/madlib/*.sh \
+    && cp /opt/madlib/*.sh /usr/local/bin \
+    && chmod +x /opt/pl_java/*.sh \
         && cp /opt/pl_java/*.sh /usr/local/bin \
         && /usr/sbin/groupadd gpadmin \
         && /usr/sbin/useradd gpadmin -g gpadmin -G wheel \

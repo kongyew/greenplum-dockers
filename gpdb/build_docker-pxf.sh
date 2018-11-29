@@ -63,19 +63,14 @@ function BuildGreenplumwithPXF_USE_GPDBIMAGE()
     -v /sys/fs/cgroup:/sys/fs/cgroup:ro  \
        "${DOCKER_TAG}" "bin/bash"
 
-  # docker run  --privileged --detach --rm --tty -h "${CONTAINER_NAME}"  \
-  #        -v /sys/fs/cgroup:/sys/fs/cgroup:ro  \
-  #           "${DOCKER_TAG}" "bin/bash" -c "/usr/local/bin/startGPDB.sh;/usr/local/bin/setupPXF.sh;/usr/local/bin/startPXF.sh"
-  #
+
   export CONTAINER_ID=`docker ps  -q --filter ancestor="${DOCKER_TAG}" --format="{{.ID}}"`
   #
   docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startGPDB.sh"
   docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/setupPXF.sh"
   docker exec  -i -t ${CONTAINER_ID} "/usr/local/bin/startPXF.sh"
-  #docker exec  -i -t ${CONTAINER_ID} "/usr/bin/rm greenplum-db-*.bin"
-  #docker exec  -i -t ${CONTAINER_ID} "/usr/bin/bash"
-  # rm -rf /var/cache/yum
-  #  yum clean all
+
+
   echo "Commit docker image"
   export CONTAINER_ID=`docker ps -a -n=1 -q`
   docker commit -m "${DOCKER_PXF_LABEL}" -a "author" ${CONTAINER_ID} ${DOCKER_PXF_TAG}

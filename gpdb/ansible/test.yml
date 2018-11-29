@@ -1,0 +1,48 @@
+---
+
+- name: run the playbook tasks on the localhost
+  hosts: 127.0.0.1
+  vars:
+    TESTVAR: 5
+  connection: local
+  become: yes
+  roles:
+    - role: geerlingguy.java
+      when: "ansible_os_family == 'RedHat'"
+      java_packages:
+        - java-1.8.0-openjdk
+  roles:
+    - geerlingguy.postgresql
+  tasks:
+ # Create a new database with name "acme1"
+  - postgresql_db:
+      name: acme1
+#https://docs.ansible.com/ansible/devel/modules/postgresql_db_module.html
+  # # Create a new database with name "acme1" and specific encoding and locale
+  # # settings. If a template different from "template0" is specified, encoding
+  # # and locale settings must match those of the template.
+  # - postgresql_db:
+  #     name: acme1
+  #     encoding: UTF-8
+  #     lc_collate: de_DE.UTF-8
+  #     lc_ctype: de_DE.UTF-8
+  #     template: template0
+
+  # Dump an existing database to a file
+  - postgresql_db:
+      name: acme1
+      state: dump
+      target: /tmp/acme1.sql
+
+  # Dump an existing database to a file (with compression)
+  - postgresql_db:
+      name: acme1
+      state: dump
+      target: /tmp/acme1.sql.gz
+
+  # Dump a single schema for an existing database
+  - postgresql_db:
+      name: acme1
+      state: dump
+      target: /tmp/acme1.sql
+      target_opts: "-n public"

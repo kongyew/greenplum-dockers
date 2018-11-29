@@ -28,9 +28,8 @@ echo "delaybeforesend = 0.05" >>  $MASTER_DATA_DIRECTORY/gpssh.conf
 echo "prompt_validation_timeout = 1.0" >> $MASTER_DATA_DIRECTORY/gpssh.conf
 echo "sync_retries = 5" >> $MASTER_DATA_DIRECTORY/gpssh.conf
 echo "Using scripts to download tar files or RPM"
-su gpadmin -c "setupPXFHadoop.sh RPM"
-#service sshd restart # sometime it failed
 
-su gpadmin -c "setupPXFHive.sh RPM"
+echo "Install Java JDK"
+su gpadmin -c "setupJava.sh RPM"
 
 su gpadmin -c "setupPXFInit.sh"

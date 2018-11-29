@@ -121,6 +121,7 @@ function getOSVersion()
     minor_version=$(sed -rn 's/.*[0-9].([0-9]).*/\1/p' /etc/lsb-release)
   elif [ -f /etc/SuSE-release ]; then # Ubuntu
     major_version=$(sed -rn 's/.*VERSION =.*/p' /etc/SuSE-release)
+    cat /etc/SuSE-release
   fi
   # cat /etc/SuSE-release
   # SUSE Linux Enterprise Server 10 (x86_64)
