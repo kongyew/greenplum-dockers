@@ -4,8 +4,6 @@ DIR=/docker-entrypoint.d
 
 find / -name "run-parts"
 
-
-
 if [[ -d "$DIR" ]]
 then
   echo "Running $DIR"

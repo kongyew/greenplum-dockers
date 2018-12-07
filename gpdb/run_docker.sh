@@ -6,6 +6,8 @@ export BUILD_ENV="test"
 export VOLUME=`pwd`
 export START_GPDB="yes"
 
+docker ps --filter "name=$DOCKER_LATEST_TAG"
+
 
 docker run  -it --hostname=gpdbsne \
     --name gpdb5 \

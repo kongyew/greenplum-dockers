@@ -119,7 +119,7 @@ export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1
  # fi
 
  su gpadmin -l -c "echo \"host all all 0.0.0.0/0 md5\" >> /gpdata/master/gpseg-1/pg_hba.conf"
- su gpadmin -l -c "export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source $GPDB_HOME/greenplum_path.sh;gpstart -a;  exit 0"
+ su gpadmin -l -c "export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1;source $GPDB_HOME/greenplum_path.sh;gpstart -a -t 240;  exit 0"
 else
   echo "Cannot find file: $GPDB_HOME/greenplum_path.sh"
 fi

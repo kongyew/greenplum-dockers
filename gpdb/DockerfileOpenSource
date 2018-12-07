@@ -24,13 +24,12 @@ COPY gphdfs    /opt/gphdfs/
 
 RUN echo root:pivotal | chpasswd
 
-RUN apt-get --assume-yes update && apt-get -y install sudo software-properties-common vim less postgresql openssh-server \
+RUN apt --assume-yes update \
+ && apt-get -y install sudo software-properties-common \
  && add-apt-repository ppa:greenplum/db \
- && apt-get --assume-yes update \
- && apt-get -y install greenplum-db-oss \
- && apt-add-repository ppa:ansible/ansible \
+ && add-apt-repository ppa:ansible/ansible \
  && apt --assume-yes update \
- && apt -y install ansible \
+ && apt-get --assume-yes update && apt-get -y install vim less postgresql openssh-server ansible greenplum-db-oss \
  && . /opt/gpdb/greenplum_path.sh \
  && cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_singlenode . \
  && cp /opt/configs/*.sh /usr/local/bin/ \
@@ -52,25 +51,25 @@ RUN apt-get --assume-yes update && apt-get -y install sudo software-properties-c
     && chown -R gpadmin:gpadmin /opt/gpdb \
     && cp  /opt/configs/limits.conf.add /etc/security/limits.conf \
     && cp  /opt/configs/sysctl.conf.add /etc/security/sysctl.conf \
-       && ssh-keygen -f /root/.ssh/id_rsa -N ''  \
-       && cat /root/.ssh/id_rsa.pub > /root/.ssh/authorized_keys \
-       && mkdir -p /home/gpadmin/.ssh  \
-       && cat /root/.ssh/id_rsa.pub >> /home/gpadmin/.ssh/authorized_keys \
-       && cp /root/.ssh/id_rsa /root/.ssh/id_rsa.pub /home/gpadmin/.ssh/  \
-       && chown gpadmin:gpadmin -R /home/gpadmin/.ssh \
-       && echo "gpdbsne" > /tmp/gpdb-hosts \
-       && cp /opt/configs/gpinitsystem_singlenode /tmp \
-       && chmod 777 /tmp/gpinitsystem_singlenode \
-       && hostname > ~/orig_hostname \
-       && hostname > /tmp/orig_hostname \
-       && echo "127.0.0.1 gpdbsne gpdbsne.localdomain" >> /etc/hosts \
-       && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
-       && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
-       && locale-gen en_US.UTF-8 \
-       && apt-get clean all \
-       &&  rm -f /etc/service/sshd/down
-       # \
-       #&& /etc/my_init.d/00_regen_ssh_host_keys.sh \
+    && ssh-keygen -f /root/.ssh/id_rsa -N ''  \
+    && cat /root/.ssh/id_rsa.pub > /root/.ssh/authorized_keys \
+    && mkdir -p /home/gpadmin/.ssh  \
+    && cat /root/.ssh/id_rsa.pub >> /home/gpadmin/.ssh/authorized_keys \
+    && cp /root/.ssh/id_rsa /root/.ssh/id_rsa.pub /home/gpadmin/.ssh/  \
+    && chown gpadmin:gpadmin -R /home/gpadmin/.ssh \
+    && echo "gpdbsne" > /tmp/gpdb-hosts \
+    && cp /opt/configs/gpinitsystem_singlenode /tmp \
+    && chmod 777 /tmp/gpinitsystem_singlenode \
+    && hostname > ~/orig_hostname \
+    && hostname > /tmp/orig_hostname \
+    && echo "127.0.0.1 gpdbsne gpdbsne.localdomain" >> /etc/hosts \
+    && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
+    && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
+    && locale-gen en_US.UTF-8 \
+    && apt-get clean all \
+    &&  rm -f /etc/service/sshd/down
+    # \
+    #&& /etc/my_init.d/00_regen_ssh_host_keys.sh \
 
 EXPOSE 5432 22
 EXPOSE 40000 40001 40002

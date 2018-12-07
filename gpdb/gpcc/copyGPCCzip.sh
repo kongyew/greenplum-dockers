@@ -11,7 +11,6 @@ fi
 current=`pwd`
 . ./util.sh
 
-
 # Default environment:
 if [ -f /usr/local/greenplum-db/greenplum_path.sh ]; then
   export GPDB_HOME="/usr/local/greenplum-db"
@@ -20,7 +19,6 @@ fi
 if [ -f /opt/gpdb/greenplum_path.sh ]; then
   export GPDB_HOME="/opt/gpdb"
 fi
-
 
 
 if [ "$(whoami)" == "gpadmin" ]; then
@@ -43,12 +41,17 @@ else
 fi
 
 
-
 source /usr/local/greenplum-db/greenplum_path.sh
 export GPCC_DIR=`ls gpccinstall-*`
 export GPCC_BIN="./$GPCC_DIR "
+export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1
 
-source /usr/local/greenplum-db/greenplum_path.sh
+echo "Install GPPerMon"
+gpperfmon_install --enable --password changeme --port 5432
+gpstop -ar
+
+${GPCC_BIN} --enable --password changeme --port 5432
+
 echo -e "changeme" | ${GPCC_BIN} -W
 
 

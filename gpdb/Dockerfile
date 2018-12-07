@@ -7,12 +7,15 @@ FROM centos/systemd:latest
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.13.0-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.13.0"
+ARG GPDB_VERSION="5.14.0-rhel6-x86_64"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.14.0"
+ARG GPDB_HOST="gpdbsne"
 
 # Passing argument to this env variable inside your Dockerfile:
 ENV GPDB_VERSION=$GPDB_VERSION
 ENV GPDB_DOWNLOAD=$GPDB_DOWNLOAD
+ENV GPDB_HOST=$GPDB_HOST
+
 ################################################################################
 COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
@@ -21,7 +24,6 @@ COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
 # COPY ${GPDB_DOWNLOAD}/madlib-1.15.1-gp5-rhel7-x86_64.tar.gz /tmp
 COPY ${GPDB_DOWNLOAD}/greenplum-cc-web-*.*-LINUX-x86_64.zip /tmp
 # COPY ${GPDB_DOWNLOAD}/greenplum-text-*-rhel6_x86_64.tar.gz /tmp
-
 
 COPY configs /opt/configs/
 COPY PXF    /opt/PXF/
@@ -53,9 +55,9 @@ RUN echo root:pivotal | chpasswd \
     && chmod +x /opt/PXF/*.sh \
     && cp /opt/PXF/*.sh /usr/local/bin \
     && /usr/sbin/groupadd gpadmin \
-        && /usr/sbin/useradd gpadmin -g gpadmin -G wheel \
-        && echo "pivotal"|passwd --stdin gpadmin \
-        && echo "gpadmin        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers \
+    && /usr/sbin/useradd gpadmin -g gpadmin -G wheel \
+    && echo "pivotal"|passwd --stdin gpadmin \
+    && echo "gpadmin        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers \
         && mv /opt/configs/bash_profile /home/gpadmin/.bash_profile \
         && mv /opt/configs/bashrc_template /home/gpadmin/.bashrc \
         && chown -R gpadmin: /home/gpadmin \
@@ -69,12 +71,12 @@ RUN echo root:pivotal | chpasswd \
       && cat /root/.ssh/id_rsa.pub >> /home/gpadmin/.ssh/authorized_keys \
       && cp /root/.ssh/id_rsa /root/.ssh/id_rsa.pub /home/gpadmin/.ssh/  \
       && chown gpadmin:gpadmin -R /home/gpadmin/.ssh \
-      && echo "gpdbsne" > /tmp/gpdb-hosts \
+      && echo ${GPDB_HOST} > /tmp/gpdb-hosts \
       && cp /opt/configs/gpinitsystem_singlenode /tmp \
       && chmod 777 /tmp/gpinitsystem_singlenode \
       && hostname > ~/orig_hostname \
       && hostname > /tmp/orig_hostname \
-      && echo "127.0.0.1 gpdbsne gpdbsne.localdomain" >> /etc/hosts \
+      && echo "127.0.0.1 ${GPDB_HOST} ${GPDB_HOST}.localdomain" >> /etc/hosts \
       && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
       && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
       && rm -f /tmp/greenplum-db-${GPDB_VERSION}.bin \

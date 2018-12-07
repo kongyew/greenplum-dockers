@@ -5,7 +5,8 @@
 
 # echo "docker-squash --output-path squashed.tar $DOCKER_LATEST_TAG -t $DOCKER_LATEST_TAG"
 docker-squash --output-path squashed.tar $DOCKER_LATEST_TAG -t $DOCKER_LATEST_TAG
-cat squashed.tar | docker load
+#cat squashed.tar | docker load
+docker load --input squashed.tar
 docker images $DOCKER_LATEST_TAG
 
 
