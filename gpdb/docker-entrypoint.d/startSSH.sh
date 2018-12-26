@@ -17,6 +17,12 @@ then
 
 else
   echo "SSHD isn't running"
+  # Prevent ssh timeout on the server side
+  sed -i 's/#ClientAliveInterval 0/ClientAliveInterval 120/g' /etc/ssh/sshd_config
+  sed -i 's/#ClientAliveCountMax 3/ClientAliveCountMax 720/g' /etc/ssh/sshd_config
+
+
+
   if [ -f /etc/redhat-release ]; then
     if  [ "$major_version" -ge "7" ]; then # "$a" -ge "$b" ]
       #echo "systemctl start sshd.service"

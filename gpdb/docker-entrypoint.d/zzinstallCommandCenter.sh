@@ -17,9 +17,27 @@ CUR_DIR=`pwd`
 
 
 if [[ "$INSTALL_COMMANDCENTER" == "1" || "$INSTALL_COMMANDCENTER" == 'yes' ]]; then
+
+  if [ "$(whoami)" == "gpadmin" ]; then
+    sudo chown -R gpadmin:gpadmin /tmp/*.zip
+    sudo chown -R gpadmin:gpadmin /opt/gpcc/
+    echo "Install GPCC"
     cd /opt/gpcc
+    /opt/gpcc/copyGPCCzip.sh
+    /opt/gpcc/installDataCollectionAgent.sh
     /opt/gpcc/setupGPCC.sh
     cd $CUR_DIR
+  else
+    chown -R gpadmin:gpadmin /tmp/*.zip
+    chown -R gpadmin:gpadmin /opt/gpcc/
+    echo "Install GPCC"
+    su gpadmin -c "cd /opt/gpcc"
+    su gpadmin -c "/opt/gpcc/copyGPCCzip.sh"
+    su gpadmin -c "/opt/gpcc/installDataCollectionAgent.sh"
+    su gpadmin -c "/opt/gpcc/setupGPCC.sh"
+
+  fi
+
 else
   exit 0
 fi

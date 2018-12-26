@@ -22,10 +22,16 @@ fi
 
 
 if [ "$(whoami)" == "gpadmin" ]; then
-    cp  /tmp/greenplum-cc-web-*-LINUX-x86_64.zip /opt/gpcc
-    export GPCC_ZIP=`ls  ./greenplum-cc-web-*-LINUX-x86_64.zip`
-    unzip ${GPCC_ZIP}
-    cp  greenplum-cc-web-*-LINUX-x86_64
+  cp  /tmp/greenplum-cc-web-*-LINUX-x86_64.zip /opt/gpcc
+  cd /opt/gpcc
+  export GPCC_ZIP=`ls  ./greenplum-cc-web-*-LINUX-x86_64.zip`
+  unzip ${GPCC_ZIP}
+  export GPCC_BIN=`ls  greenplum-cc-web-*-LINUX-x86_64/gpccinstall-*`
+  cp $GPCC_BIN .
+  rm -f ${GPCC_ZIP}
+  rm -f greenplum-cc-web-*-LINUX-x86_64/*
+  rmdir  greenplum-cc-web-*-LINUX-x86_64
+  chown -R gpadmin:gpadmin /opt/gpcc/
 else
    cp  /tmp/greenplum-cc-web-*-LINUX-x86_64.zip /opt/gpcc
    cd /opt/gpcc
@@ -39,23 +45,3 @@ else
    chown -R gpadmin:gpadmin /opt/gpcc/
 
 fi
-
-
-source /usr/local/greenplum-db/greenplum_path.sh
-export GPCC_DIR=`ls gpccinstall-*`
-export GPCC_BIN="./$GPCC_DIR "
-export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1
-
-echo "Install GPPerMon"
-gpperfmon_install --enable --password changeme --port 5432
-gpstop -ar
-
-${GPCC_BIN} --enable --password changeme --port 5432
-
-echo -e "changeme" | ${GPCC_BIN} -W
-
-
-gpconfig -s gp_enable_query_metrics
-gpconfig -c gp_enable_query_metrics -v on
-
-gpstop -r

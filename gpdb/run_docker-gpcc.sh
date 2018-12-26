@@ -27,4 +27,4 @@ docker run  -it --hostname=gpdbsne \
     --volume "${VOLUME}":/code \
     --env START_GPDB=yes \
     --env INSTALL_COMMANDCENTER=yes \
-    "${DOCKER_PXF_TAG}" bin/bash
+    "${DOCKER_TAG}" bin/bash

@@ -7,8 +7,11 @@ FROM centos/systemd:latest
 
 # Argument
 ARG build_env=test
-ARG GPDB_VERSION="5.14.0-rhel6-x86_64"
-ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.14.0"
+
+ARG GPDB_REDHAT_NAME="5.15.1-rhel6-x86_64"
+
+ARG GPDB_VERSION="5.15.1"
+ARG GPDB_DOWNLOAD="greenplum-downloader/DOWNLOAD_5.15.1"
 ARG GPDB_HOST="gpdbsne"
 
 # Passing argument to this env variable inside your Dockerfile:
@@ -17,7 +20,7 @@ ENV GPDB_DOWNLOAD=$GPDB_DOWNLOAD
 ENV GPDB_HOST=$GPDB_HOST
 
 ################################################################################
-COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_VERSION}.zip /tmp
+COPY ${GPDB_DOWNLOAD}/greenplum-db-${GPDB_REDHAT_NAME}.zip /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-*gp5-rhel6-x86_64.gppkg /tmp
 #COPY ${GPDB_DOWNLOAD}/pljava-1.4.2-gp5-rhel6-x86_64.gppkg /tmp
 
@@ -41,12 +44,12 @@ COPY ansible /opt/ansible/
 RUN echo root:pivotal | chpasswd \
     && yum install -y vim wget unzip which tar more util-linux-ng passwd \
      openssh-clients openssh-server ed m4 sudo krb5-libs krb5-workstation \
-     cronie cronie-anacron iproute net-tools less \
-     epel-release ansible \
-    && unzip  /tmp/greenplum-db-${GPDB_VERSION}.zip -d /tmp/ \
-    && rm /tmp/greenplum-db-${GPDB_VERSION}.zip \
-    && sed -i s/"more << EOF"/"cat << EOF"/g /tmp/greenplum-db-${GPDB_VERSION}.bin \
-    && echo -e "yes\n\nyes\nyes\n" | /tmp/greenplum-db-${GPDB_VERSION}.bin \
+     cronie cronie-anacron iproute net-tools less epel-release \
+    && yum install -y ansible \
+    && unzip  /tmp/greenplum-db-${GPDB_REDHAT_NAME}.zip -d /tmp/ \
+    && rm /tmp/greenplum-db-${GPDB_REDHAT_NAME}.zip \
+    && sed -i s/"more << EOF"/"cat << EOF"/g /tmp/greenplum-db-${GPDB_REDHAT_NAME}.bin \
+    && echo -e "yes\n\nyes\nyes\n" | /tmp/greenplum-db-${GPDB_REDHAT_NAME}.bin \
     && ln -s /usr/local/greenplum-db /usr/local/greenplum-db-devel \
     && cat /opt/configs/sysctl.conf.add >> /etc/sysctl.conf \
     && cat /opt/configs/limits.conf.add >> /etc/security/limits.conf \
@@ -79,7 +82,7 @@ RUN echo root:pivotal | chpasswd \
       && echo "127.0.0.1 ${GPDB_HOST} ${GPDB_HOST}.localdomain" >> /etc/hosts \
       && su -c gpadmin -c "echo 'source /usr/local/greenplum-db/greenplum_path.sh' >> .bashrc" \
       && su -c gpadmin -c "echo 'export MASTER_DATA_DIRECTORY=/gpdata/master/gpseg-1' >> .bashrc" \
-      && rm -f /tmp/greenplum-db-${GPDB_VERSION}.bin \
+      && rm -f /tmp/greenplum-db-${GPDB_REDHAT_NAME}.bin \
       && yum clean all \
       && rm -rf /var/cache/yum
 ################################################################################

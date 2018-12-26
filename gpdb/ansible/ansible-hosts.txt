@@ -1,0 +1,6 @@
+[gpdb_master]
+alias ansible_ssh_host=127.0.0.1
+
+
+[gpdb_segments]
+gpdbsne ansible_ssh_host=127.0.0.1

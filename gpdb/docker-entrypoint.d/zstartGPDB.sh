@@ -13,6 +13,9 @@ if [ -z  "$START_GPDB" ]; then
   exit 0
 fi
 
+rm -rf /tmp/.s.PGSQL*
+
+
 if [[ "$START_GPDB" == "1" || "$START_GPDB" == 'yes' ]]; then
   result=$(ps -ef | grep 'postgres' | wc -l)
   if [[ "$result" -eq "1" ]];then

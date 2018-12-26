@@ -1,5 +1,11 @@
 #!/bin/bash
 set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Including configurations
+
+. "${DIR}"/config.sh
+
 [[ ${DEBUG} == true ]] && set -x
 
 if [[ ! "$(whoami)" =~ ^(gpadmin|root)$ ]]
@@ -82,7 +88,7 @@ else
   # value=$( grep -ic "gpmon" $MASTER_DATA_DIRECTORY/pg_hba.conf )
   # if [ "$value" -eq 0 ]
   # then
-  #   sed -i -e "\$a ${LINE_VALUE}" ${PG_HBA_CONF}  
+  #   sed -i -e "\$a ${LINE_VALUE}" ${PG_HBA_CONF}
   # else
   #   echo "Found gpmon in this file : $MASTER_DATA_DIRECTORY/pg_hba.conf"
   #   #  directly modify the file:
@@ -91,21 +97,21 @@ else
   # fi
 fi
 
-
-export GPCC_ZIP=`ls  ./greenplum-cc-web-*-LINUX-x86_64.zip`
-unzip ${GPCC_ZIP}
-
-source /usr/local/greenplum-db/greenplum_path.sh
-
-cd greenplum-cc-web-*-LINUX-x86_64
-mkdir /usr/local/greenplum-cc-web-4.1.0
-
-export GPCC_BIN=`ls  ./gpccinstall-*`
-
-echo "changeme" | ${GPCC_BIN} -W
-
-
-gpconfig -s gp_enable_query_metrics
-gpconfig -c gp_enable_query_metrics -v on
-
-gpstop -r
+#
+# export GPCC_ZIP=`ls  ./greenplum-cc-web-*-LINUX-x86_64.zip`
+# unzip ${GPCC_ZIP}
+#
+# source /usr/local/greenplum-db/greenplum_path.sh
+#
+# cd greenplum-cc-web-*-LINUX-x86_64
+# mkdir /usr/local/greenplum-cc-web-4.1.0
+#
+# export GPCC_BIN=`ls  ./gpccinstall-*`
+#
+# echo "changeme" | ${GPCC_BIN} -W
+#
+#
+# gpconfig -s gp_enable_query_metrics
+# gpconfig -c gp_enable_query_metrics -v on
+#
+# gpstop -r
