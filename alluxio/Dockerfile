@@ -1,6 +1,6 @@
 ###############################################################################
 
-FROM alpine:latest
+FROM alpine:3.15
 MAINTAINER Kong
 
 ARG ALLUXIO_VERSION=1.7.0
